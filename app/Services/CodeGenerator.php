@@ -68,7 +68,9 @@ final class CodeGenerator
             "SELECT setting_value FROM settings WHERE setting_group='code_generation' AND setting_key='cylinder_seq_width'"
         )['setting_value'] ?? '6'))));
 
-        $capacity = rtrim(rtrim(number_format((float) $group['capacity_kg'], 3, '.', ''), '0'), '.');
+        $capacity = trim((string) $group['capacity_kg']);
+        $capacity = preg_replace('/(\\.\\d*?[1-9])0+$/', '$1', $capacity) ?? $capacity;
+        $capacity = rtrim(rtrim($capacity, '0'), '.');
         $capacity = str_replace('.', '_', $capacity);
 
         if (preg_match('/^(.*)\{SEQ(?::(\d+))?\}(.*)$/', $pattern, $m) !== 1) {
