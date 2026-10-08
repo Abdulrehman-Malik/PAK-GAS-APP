@@ -37,6 +37,7 @@ use App\Services\AuditService;
 use App\Services\UserService;
 use App\Services\PasswordService;
 use App\Services\SettingsService;
+use App\Services\MasterProtectionService;
 use App\Repositories\PartyRepository;
 use App\Repositories\CylinderGroupRepository;
 use App\Repositories\CylinderRepository;
@@ -52,13 +53,13 @@ $passwordService = new PasswordService($db, $auditService);
 $passwordController = new PasswordController($auth, $request, $session, new Validator(), $passwordService);
 $homeController = new HomeController($auth);
 
+$protectionService = new MasterProtectionService($db);
+$stockService = new StockService($db, new CodeGenerator($db));
 $partyController = new PartyController(new PartyRepository($db), $auth, $request, new Validator(), $auditService, $protectionService);
 $groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService, $protectionService);
-$protectionService = new MasterProtectionService($db);
 $cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $stockService, $auth, $request, new Validator(), $auditService, $protectionService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 
-$stockService = new StockService($db, new CodeGenerator($db));
 $openingStockController = new OpeningStockController(new StockBatchRepository($db), $stockService, $auth, $request, new Validator(), $auditService);
 
 $ledgerService = new LedgerService($db);
@@ -175,8 +176,8 @@ $router->get('/counter', [$counterController, 'index'], true, 'counter.view');
 $router->get('/counter/status', [$counterController, 'status'], true, 'counter.view');
 $router->post('/counter/open', [$counterController, 'open'], true, 'counter.open');
 $router->post('/counter/close', [$counterController, 'close'], true, 'counter.close');
-$router->post('/counter/manual', [$counterController, 'manual'], true, 'counter.close');
-$router->post('/counter/transfer', [$counterController, 'transfer'], true, 'counter.close');
+$router->post('/counter/manual', [$counterController, 'manual'], true, 'counter.adjust');
+$router->post('/counter/transfer', [$counterController, 'transfer'], true, 'counter.adjust');
 
 $router->get('/expenses', [$expenseController, 'index'], true, 'expenses.view');
 $router->get('/expenses/data', [$expenseController, 'data'], true, 'expenses.view');
