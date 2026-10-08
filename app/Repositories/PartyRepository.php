@@ -16,4 +16,6 @@ final class PartyRepository
     public function find(int $id): ?array { return $this->db->fetchOne('SELECT * FROM parties WHERE id=:id',['id'=>$id]); }
     public function create(array $d): int { $this->db->execute('INSERT INTO parties(code,party_type,name,phone,address,allow_credit,credit_limit,opening_balance,active,notes,created_by,updated_by) VALUES(:code,:party_type,:name,:phone,:address,:allow_credit,:credit_limit,:opening_balance,1,:notes,:uid,:uid)',$d); return $this->db->lastInsertId(); }
     public function update(int $id,array $d): void { $d['id']=$id; $this->db->execute('UPDATE parties SET name=:name,phone=:phone,address=:address,allow_credit=:allow_credit,credit_limit=:credit_limit,notes=:notes,active=:active,updated_by=:uid WHERE id=:id',$d); }
+    public function setActive(int $id,int $active,int $userId):void{$this->db->execute('UPDATE parties SET active=:active,updated_by=:user WHERE id=:id',['active'=>$active,'user'=>$userId,'id'=>$id]);}
+    public function delete(int $id):void{$this->db->execute('DELETE FROM parties WHERE id=:id',['id'=>$id]);}
 }
