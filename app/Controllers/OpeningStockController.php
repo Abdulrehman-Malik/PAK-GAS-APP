@@ -61,15 +61,32 @@ final class OpeningStockController
             if(!is_array($file)||($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK)throw new \InvalidArgumentException('Excel file is required.');
             $ext=strtolower(pathinfo((string)($file['name']??''),PATHINFO_EXTENSION));
             if($ext!=='xlsx')throw new \InvalidArgumentException('Only .xlsx files are supported.');
-            return Response::json(['ok'=>true,'data'=>$this->import->openingPreview((string)$file['tmp_name'])]);
+            $preview = $this->import->openingPreview((string) $file['tmp_name']);
+            $token = $this->import->createPreview(
+                (int) $this->auth->user()['id'],
+                (string) $file['name'],
+                $preview
+            );
+            return Response::json([
+                'ok' => true,
+                'data' => [
+                    'rows_total' => $preview['rows_total'],
+                    'valid' => $preview['valid'],
+                    'errors' => $preview['errors'],
+                    'token' => $token,
+                ],
+            ]);
         }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
 
     public function importCommit():Response{
         try{
-            $d=$this->request->input();$rows=json_decode((string)($d['rows_json']??'[]'),true,512,JSON_THROW_ON_ERROR);
-            if(!is_array($rows)||$rows===[])throw new \InvalidArgumentException('No valid rows to commit.');
-            $result=$this->import->openingCommit($rows,(int)$this->auth->user()['id'],true);
+            $d=$this->request->input();
+            $token = trim((string) ($d['token'] ?? ''));
+            if ($token === '') {
+                throw new \InvalidArgumentException('Import preview token is required.');
+            }
+            $result = $this->import->openingCommitPreview($token, (int) $this->auth->user()['id']);
             return Response::json(['ok'=>true,'data'=>$result,'message'=>'Excel opening-stock import committed.']);
         }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
