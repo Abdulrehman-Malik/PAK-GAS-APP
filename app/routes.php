@@ -9,11 +9,16 @@ use App\Controllers\PartyController;
 use App\Controllers\CylinderGroupController;
 use App\Controllers\CylinderController;
 use App\Controllers\RateController;
+use App\Controllers\OpeningStockController;
 use App\Repositories\PartyRepository;
 use App\Repositories\CylinderGroupRepository;
 use App\Repositories\CylinderRepository;
 use App\Repositories\RateRepository;
+use App\Repositories\StockBatchRepository;
 use App\Services\CodeGenerator;
+use App\Services\StockService;
+use App\Services\CylinderStatus;
+use App\Services\AuditService;
 use App\Core\Validator;
 use App\Controllers\PasswordController;
 use App\Services\PasswordService;
@@ -29,11 +34,8 @@ $partyController = new PartyController(new PartyRepository($db), $auth, $request
 $groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService);
 $cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
-$openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CylinderStatus()), $auth, $request, new Validator(), new AuditService($db));
-$settingsController = new SettingsController(
-    new SettingsService(new SettingsRepository($db)),
-    $auth
-);
+$openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CodeGenerator($db)), $auth, $request, new Validator(), $auditService);
+$settingsController = new SettingsController(new SettingsService(new SettingsRepository($db)), $auth);
 
 $router->get('/login', [$authController, 'showLogin']);
 $router->post('/login', [$authController, 'login']);
@@ -54,7 +56,6 @@ $router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.cre
 $router->get('/rates', [$rateController, 'index'], true, 'rates.view');
 $router->get('/rates/data', [$rateController, 'data'], true, 'rates.view');
 $router->post('/rates', [$rateController, 'store'], true, 'rates.create');
-
 $router->get('/opening-stock', [$openingStockController, 'index'], true, 'opening_stock.view');
 $router->get('/opening-stock/data', [$openingStockController, 'data'], true, 'opening_stock.view');
 $router->post('/opening-stock', [$openingStockController, 'store'], true, 'opening_stock.create');
