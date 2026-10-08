@@ -48,7 +48,7 @@ final class PaymentService
                     [
                         'party'=>$partyId,'no'=>$chequeNo,'bank'=>trim((string)($input['cheque_bank']??''))?:null,
                         'date'=>$chequeDate,'amount'=>$amount,
-                        'status'=>$this->postingMode()==='ON_RECEIPT'?'CLEARED':'PENDING','user'=>$userId
+                        'status'=>'PENDING','user'=>$userId
                     ]
                 );
                 $chequeId=(int)$this->db->pdo()->lastInsertId();
