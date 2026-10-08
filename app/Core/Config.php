@@ -25,6 +25,8 @@ final class Config
             ],
             'session_timeout' => max(300, (int) self::env('SESSION_TIMEOUT', '1800')),
             'session_secure_cookie' => filter_var(self::env('SESSION_SECURE_COOKIE', 'false'), FILTER_VALIDATE_BOOL),
+            'seed_admin_username' => self::env('SEED_ADMIN_USERNAME', 'admin'),
+            'seed_admin_password' => self::env('SEED_ADMIN_PASSWORD', ''),
         ];
     }
 

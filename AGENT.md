@@ -33,7 +33,8 @@ lpg-pos/
 ├── bin/
 │   └── seed.php              # creates the environment-based administrator
 ├── database/
-│   └── schema.sql             # complete DB creation, tables, views, indexes and static seed data
+│   ├── schema.sql             # complete clean-install DB baseline + static seed data
+│   └── migrations/            # numbered future incremental DB changes, auto-applied by web installer
 ├── public/                   # web root (only this folder is exposed)
 │   ├── index.php             # front controller
 │   ├── .htaccess             # rewrite everything to index.php
@@ -129,7 +130,11 @@ Invariants (each has a test):
 
 ## 8. Database rules
 
-- Database baseline is one canonical SQL file: `database/schema.sql`. Do not add migration scripts.
+- Database baseline is one canonical SQL file: database/schema.sql.
+- Future incremental DB changes must be numbered SQL files under database/migrations/.
+- Never edit an already-applied migration; create a new migration instead.
+- The front controller redirects to /install whenever the baseline is missing or any migration is pending.
+- The web installer reads DB settings from .env, creates the configured database, imports the baseline, applies pending migrations and seeds the Administrator.
 - FKs on every relationship with `ON DELETE RESTRICT`; indexes on FKs and on common filters (`status`, `entry_date`, `code`, `location`).
 - Use `CHECK` constraints (MySQL 8) where possible; if running MariaDB/older MySQL, enforce in services as well.
 - Create SQL **views** for repeated reads (e.g. `v_cylinder_status`, `v_party_balance`, `v_shop_stock_summary`) so reports and screens agree.
@@ -206,15 +211,22 @@ Invariants (each has a test):
 ### Phase 7 — Optional / pending confirmation
 - [ ] POS hold/recall draft, dashboard widgets (only if requested)
 
-## 12. Commands (adjust once the skeleton exists)
+## 12. Commands
 
+Normal Windows installation is browser-based:
+1. Copy .env.example to .env and configure DB credentials/admin credentials.
+2. Start Apache + MySQL.
+3. Open the application.
+4. Let /install create the database, import schema.sql, apply pending migrations and seed the Administrator.
+
+Quick local development:
 ```
-composer install
-cp .env.example .env            # set DB credentials
-C:\xampp\mysql\bin\mysql.exe -u root -p < database\schema.sql  # create DB + schema + static seeds
-php bin\seed.php                                      # create/refresh Admin from .env
-php -S localhost:8080 -t public # quick dev server (or use XAMPP vhost pointing at public/)
-vendor/bin/phpunit              # run tests
+php -S localhost:8080 -t public
+```
+
+Maintenance compatibility command:
+```
+php bin\seed.php
 ```
 
 ## 13. Decisions log (append as you go)
@@ -256,5 +268,11 @@ See `REQUIREMENTS.md` §11. Do not block on them: implement the stated default a
 
 ## 2026-10-08 Database installation decision
 - [x] All database DDL, views, indexes and static seed records consolidated into `database/schema.sql`.
-- [x] Legacy `database/migrations/*.sql`, `bin/migrate.php`, `MigrationService` and automatic login-time migration execution removed.
-- [x] Windows/XAMPP installation documented around MySQL schema import plus `bin/seed.php` for the Admin credential.
+
+
+### 2026-10-08 Web Installer + Migration Queue
+- [x] Installation checks PHP version and mandatory extensions before database work.
+- [x] Database creation/import uses DB_HOST, DB_PORT, DB_NAME, DB_USER and DB_PASS from .env.
+- [x] Administrator is created from SEED_ADMIN_USERNAME and SEED_ADMIN_PASSWORD with password_hash().
+- [x] Future numbered SQL migrations are checksum-tracked in schema_migrations and auto-run from /install.
+- [x] Normal application requests are blocked/redirected to /install while a migration is pending.
