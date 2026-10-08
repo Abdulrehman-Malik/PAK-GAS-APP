@@ -43,7 +43,12 @@ $groupController = new CylinderGroupController(new CylinderGroupRepository($db),
 $cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 $openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CodeGenerator($db)), $auth, $request, new Validator(), $auditService);
-$settingsController = new SettingsController(new SettingsService(new SettingsRepository($db)), $auth);
+$settingsController = new SettingsController(
+    new SettingsService(new SettingsRepository($db)),
+    $auth,
+    $request,
+    $auditService
+);
 $counterController = new CounterController(new CounterService($db), $auth, $request);
 $posController = new PosController(new PosService($db, new DocNumberService($db), new LedgerService($db), new CashService($db), new RateService($db)), new RateService($db), $db, $auth, $request, new Validator());
 
@@ -54,6 +59,7 @@ $router->get('/password/change', [$passwordController, 'show'], true);
 $router->post('/password/change', [$passwordController, 'change'], true);
 $router->get('/', [$homeController, 'index'], true, 'dashboard.view');
 $router->get('/settings', [$settingsController, 'index'], true, 'settings.view');
+$router->post('/settings/pos', [$settingsController, 'updatePos'], true, 'settings.manage');
 $router->get('/parties', [$partyController, 'index'], true, 'parties.view');
 $router->get('/parties/data', [$partyController, 'data'], true, 'parties.view');
 $router->post('/parties', [$partyController, 'store'], true, 'parties.create');
