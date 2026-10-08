@@ -195,6 +195,10 @@ $router->post('/counter/open', [$counterController, 'open'], true, 'counter.open
 $router->post('/counter/close', [$counterController, 'close'], true, 'counter.close');
 $router->post('/counter/manual', [$counterController, 'manual'], true, 'counter.adjust');
 $router->post('/counter/transfer', [$counterController, 'transfer'], true, 'counter.adjust');
+$router->post('/counter/create', [$counterController, 'create'], true, 'settings.manage');
+$router->post('/counter/update', [$counterController, 'edit'], true, 'settings.manage');
+$router->post('/counter/deactivate', [$counterController, 'deactivate'], true, 'settings.manage');
+$router->post('/counter/delete', [$counterController, 'delete'], true, 'settings.manage');
 
 $router->get('/expenses', [$expenseController, 'index'], true, 'expenses.view');
 $router->get('/expenses/data', [$expenseController, 'data'], true, 'expenses.view');
