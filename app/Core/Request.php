@@ -47,6 +47,11 @@ final class Request
         return '/' . trim($uri, '/');
     }
 
+    public function file(string $key): ?array
+    {
+        return isset($_FILES[$key]) && is_array($_FILES[$key]) ? $_FILES[$key] : null;
+    }
+
     public function ip(): string
     {
         return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
