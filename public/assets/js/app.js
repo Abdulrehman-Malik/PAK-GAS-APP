@@ -9,6 +9,38 @@ $(function(){
         return number.toLocaleString(undefined,{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
     };
 
+
+    function activateTab(tab){
+        const target=tab.getAttribute('data-bs-target')||tab.getAttribute('href');
+        if(!target||!target.startsWith('#')){return;}
+
+        if(window.bootstrap && window.bootstrap.Tab){
+            window.bootstrap.Tab.getOrCreateInstance(tab).show();
+            return;
+        }
+
+        const container=tab.closest('[role="tablist"]');
+        const scope=container ? container.parentElement : document;
+        const tabs=scope.querySelectorAll('[data-bs-toggle="tab"]');
+        tabs.forEach(function(item){
+            const itemTarget=item.getAttribute('data-bs-target')||item.getAttribute('href');
+            const active=item===tab;
+            item.classList.toggle('active',active);
+            item.setAttribute('aria-selected',active?'true':'false');
+        });
+
+        scope.querySelectorAll('.tab-pane').forEach(function(pane){
+            const active='#'+pane.id===target;
+            pane.classList.toggle('show',active);
+            pane.classList.toggle('active',active);
+        });
+    }
+
+    $(document).on('click','[data-bs-toggle="tab"]',function(event){
+        event.preventDefault();
+        activateTab(this);
+    });
+
     const storageKey='pak-gas-sidebar-collapsed';
     const $body=$('body');
     const $sidebar=$('#appSidebar');
