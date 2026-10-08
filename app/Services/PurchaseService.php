@@ -304,7 +304,7 @@ final class PurchaseService
                             'bank' => trim((string) ($input['cheque_bank'] ?? '')) ?: null,
                             'cheque_date' => $chequeDate,
                             'amount' => $paid,
-                            'status' => $this->chequePostingMode() === 'ON_RECEIPT' ? 'CLEARED' : 'PENDING',
+                            'status' => $this->chequePostingMode() === 'ON_RECEIPT' ? 'PENDING' : 'PENDING',
                             'user' => $userId,
                         ]
                     );
