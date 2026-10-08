@@ -52,9 +52,10 @@ $passwordService = new PasswordService($db, $auditService);
 $passwordController = new PasswordController($auth, $request, $session, new Validator(), $passwordService);
 $homeController = new HomeController($auth);
 
-$partyController = new PartyController(new PartyRepository($db), $auth, $request, new Validator(), $auditService);
-$groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService);
-$cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
+$partyController = new PartyController(new PartyRepository($db), $auth, $request, new Validator(), $auditService, $protectionService);
+$groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService, $protectionService);
+$protectionService = new MasterProtectionService($db);
+$cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $stockService, $auth, $request, new Validator(), $auditService, $protectionService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 
 $stockService = new StockService($db, new CodeGenerator($db));
@@ -109,14 +110,21 @@ $router->post('/settings/pos', [$settingsController, 'updatePos'], true, 'settin
 $router->get('/parties', [$partyController, 'index'], true, 'parties.view');
 $router->get('/parties/data', [$partyController, 'data'], true, 'parties.view');
 $router->post('/parties', [$partyController, 'store'], true, 'parties.create');
+$router->post('/parties/delete', [$partyController, 'delete'], true, 'parties.create');
+$router->post('/parties/deactivate', [$partyController, 'deactivate'], true, 'parties.create');
 
 $router->get('/cylinder-groups', [$groupController, 'index'], true, 'cylinder_groups.view');
 $router->get('/cylinder-groups/data', [$groupController, 'data'], true, 'cylinder_groups.view');
 $router->post('/cylinder-groups', [$groupController, 'store'], true, 'cylinder_groups.create');
+$router->post('/cylinder-groups/delete', [$groupController, 'delete'], true, 'cylinder_groups.create');
+$router->post('/cylinder-groups/deactivate', [$groupController, 'deactivate'], true, 'cylinder_groups.create');
 
 $router->get('/cylinders', [$cylinderController, 'index'], true, 'cylinders.view');
 $router->get('/cylinders/data', [$cylinderController, 'data'], true, 'cylinders.view');
 $router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.create');
+$router->get('/cylinders/history', [$cylinderController, 'history'], true, 'cylinders.view');
+$router->post('/cylinders/delete', [$cylinderController, 'delete'], true, 'cylinders.create');
+$router->post('/cylinders/deactivate', [$cylinderController, 'deactivate'], true, 'cylinders.create');
 
 $router->get('/rates', [$rateController, 'index'], true, 'rates.view');
 $router->get('/rates/data', [$rateController, 'data'], true, 'rates.view');
