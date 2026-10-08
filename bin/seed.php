@@ -95,6 +95,7 @@ $settings = [
     ['sales_credit', 'gas_decimals', '3'],
     ['sales_credit', 'money_decimals', '2'],
     ['code_generation', 'cylinder_code_mode', 'AUTO'],
+    ['code_generation', 'cylinder_code_pattern', 'CYL-{GROUP}-{SEQ:6}'],
     ['tax', 'enabled', '0'],
     ['tax', 'rate_percent', '0.00'],
     ['printing', 'paper_size', '80MM'],
