@@ -133,6 +133,26 @@ final class StockService
         );
     }
 
+    public function createManualCylinder(int $groupId,string $code,string $gas,string $condition,int $userId):int
+    {
+        $group=$this->db->fetchOne('SELECT id,capacity_kg FROM cylinder_groups WHERE id=:id AND active=1 FOR UPDATE',['id'=>$groupId]);
+        if(!$group)throw new \InvalidArgumentException('Cylinder group is invalid or inactive.');
+        if(bccomp($gas,'0.000',3)<0||bccomp($gas,(string)$group['capacity_kg'],3)>0)throw new \InvalidArgumentException('Gas is outside cylinder capacity.');
+        if(!in_array($condition,['GOOD','DAMAGED'],true))throw new \InvalidArgumentException('Invalid cylinder condition.');
+        $this->db->execute(
+            "INSERT INTO cylinders(code,group_id,gas_kg,location,customer_id,condition_code,source,active,created_by,updated_by)
+             VALUES(:code,:group,:gas,'SHOP',NULL,:condition,'MANUAL',1,:user,:user)",
+            ['code'=>$code,'group'=>$groupId,'gas'=>$gas,'condition'=>$condition,'user'=>$userId]
+        );
+        $id=(int)$this->db->pdo()->lastInsertId();
+        $this->db->execute(
+            "INSERT INTO cylinder_movements(cylinder_id,movement_type,before_gas_kg,after_gas_kg,from_location,to_location,customer_id,rate,source_document_type,source_document_id,created_by)
+             VALUES(:id,'ADJUSTMENT',0,:gas,'SHOP','SHOP',NULL,'0.00','CYLINDER',:id,:user)",
+            ['id'=>$id,'gas'=>$gas,'user'=>$userId]
+        );
+        return $id;
+    }
+
     public function createPurchasedCylinder(
         int $groupId,
         string $code,
