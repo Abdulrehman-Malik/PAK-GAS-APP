@@ -5,6 +5,12 @@ use App\Core\Auth;use App\Core\Request;use App\Core\Response;use App\Core\Valida
 final class OpeningStockController {
  public function __construct(private readonly StockBatchRepository $repo,private readonly StockService $stock,private readonly Auth $auth,private readonly Request $request,private readonly Validator $validator,private readonly AuditService $audit){}
  public function index():Response{return View::render('opening-stock/index',['pageTitle'=>'Opening Stock','user'=>$this->auth->user(),'_base_path'=>base_path()]);}
+ public function groups():Response{return Response::json(['ok'=>true,'data'=>$this->repo->groups()]);}
+ public function customers():Response{return Response::json(['ok'=>true,'data'=>$this->repo->customers(trim((string)($this->request->query()['q']??'')))]);}
+ public function importTemplate():Response
+ {
+  return Response::redirect(url('/opening-stock/import-template'));
+ }
  public function data():Response{$q=$this->request->query();return Response::json(['ok'=>true,'data'=>$this->repo->paginate((string)($q['from']??''),(string)($q['to']??''),min(100,max(10,(int)($q['limit']??25))),max(0,(int)($q['offset']??0)))]);}
  public function void(): Response
  {
