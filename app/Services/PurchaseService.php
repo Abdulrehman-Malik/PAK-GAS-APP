@@ -164,9 +164,14 @@ final class PurchaseService
                 throw new \InvalidArgumentException('Cash counter is required.');
             }
 
+            $postingMode = strtoupper((string) (($this->db->fetchOne(
+                "SELECT setting_value FROM settings WHERE setting_group='cheques' AND setting_key='posting_mode'"
+            )['setting_value'] ?? 'ON_CLEARANCE')));
+            $postedPaid = ($method === 'CHEQUE' && $postingMode === 'ON_CLEARANCE') ? '0.00' : $paid;
+
             $doc = $this->docs->next('PURCHASE');
             $oldBalance = $this->ledger->balance($supplierId);
-            $newBalance = bcadd($oldBalance, bcsub($total, $paid, 2), 2);
+            $newBalance = bcadd($oldBalance, bcsub($total, $postedPaid, 2), 2);
 
             $this->db->execute(
                 'INSERT INTO purchases
@@ -178,7 +183,7 @@ final class PurchaseService
                     'invoice' => (string) ($input['supplier_invoice_no'] ?? ''),
                     'date' => $date,
                     'total' => $total,
-                    'paid' => $paid,
+                    'paid' => $postedPaid,
                     'balance' => $newBalance,
                     'notes' => (string) ($input['notes'] ?? ''),
                     'user' => $userId,
@@ -289,7 +294,7 @@ final class PurchaseService
             }
 
             $this->audit->record($userId, 'CREATE', 'purchases', $purchaseId, null, [
-                'doc_no' => $doc, 'total' => $total, 'paid_amount' => $paid,
+                'doc_no' => $doc, 'total' => $total, 'paid_amount' => $postedPaid,
             ], null);
 
             return ['id' => $purchaseId, 'doc_no' => $doc, 'total' => $total, 'balance_after' => $newBalance];
