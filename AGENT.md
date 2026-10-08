@@ -211,15 +211,22 @@ Invariants (each has a test):
 ### Phase 7 — Optional / pending confirmation
 - [ ] POS hold/recall draft, dashboard widgets (only if requested)
 
-## 12. Commands (adjust once the skeleton exists)
+## 12. Commands
 
+Normal Windows installation is browser-based:
+1. Copy .env.example to .env and configure DB credentials/admin credentials.
+2. Start Apache + MySQL.
+3. Open the application.
+4. Let /install create the database, import schema.sql, apply pending migrations and seed the Administrator.
+
+Quick local development:
 ```
-composer install
-cp .env.example .env            # set DB credentials
-C:\xampp\mysql\bin\mysql.exe -u root -p < database\schema.sql  # create DB + schema + static seeds
-php bin\seed.php                                      # create/refresh Admin from .env
-php -S localhost:8080 -t public # quick dev server (or use XAMPP vhost pointing at public/)
-vendor/bin/phpunit              # run tests
+php -S localhost:8080 -t public
+```
+
+Maintenance compatibility command:
+```
+php bin\seed.php
 ```
 
 ## 13. Decisions log (append as you go)
