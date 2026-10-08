@@ -15,7 +15,7 @@
 - [ ] /login renders without PHP warnings/errors.
 - [ ] Invalid login is rejected without account disclosure.
 - [ ] Five failed attempts from the same username/IP trigger throttling.
-- [ ] Valid login redirects to /.
+- [ ] Valid login redirects to /password/change when force_password_change is enabled; successful password change clears the flag.
 - [ ] Dashboard renders at desktop width.
 - [ ] Sidebar uses Bootstrap offcanvas behavior at mobile width.
 - [ ] /settings is visible to Administrator.
