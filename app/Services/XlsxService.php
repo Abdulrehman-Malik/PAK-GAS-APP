@@ -92,7 +92,7 @@ final class XlsxService
                     $assoc[$header] = (string) ($row[$i] ?? '');
                 }
             }
-            if (array_filter($assoc, static fn ($value): bool => trim((string) $value) !== []) {
+            if (array_filter($assoc, static fn ($value): bool => trim((string) $value) !== '') {
                 $result[] = $assoc;
             }
         }
@@ -169,7 +169,7 @@ final class XlsxService
         $contentTypes = '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' . implode('', $overrides) . '</Types>';
         $rels = '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
         $workbook = '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' . $sheetXml . '</sheets></workbook>';
-        $workbookRels = '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxml.org/package/2006/relationships">' . implode('', $sheetRelationships) . '</Relationships>';
+        $workbookRels = '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . implode('', $sheetRelationships) . '</Relationships>';
 
         $zip = new \ZipArchive();
         if ($zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
