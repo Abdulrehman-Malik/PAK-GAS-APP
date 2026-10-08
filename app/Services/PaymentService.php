@@ -16,6 +16,39 @@ final class PaymentService
     ) {
     }
 
+    public function history(array $filters, int $limit, int $offset): array
+    {
+        $where=['1=1'];$params=[];
+        if(($filters['from']??'')!==''){$where[]='pm.payment_date>=:from';$params['from']=$filters['from'];}
+        if(($filters['to']??'')!==''){$where[]='pm.payment_date<=:to';$params['to']=$filters['to'];}
+        if((int)($filters['party_id']??0)>0){$where[]='pm.party_id=:party';$params['party']=(int)$filters['party_id'];}
+        if(($filters['status']??'')!==''){$where[]='pm.status=:status';$params['status']=$filters['status'];}
+        if(($filters['search']??'')!==''){$where[]='(pm.doc_no LIKE :search OR p.name LIKE :search OR p.code LIKE :search)';$params['search']='%'.$filters['search'].'%';}
+        $base='FROM payments pm INNER JOIN parties p ON p.id=pm.party_id LEFT JOIN users u ON u.id=pm.created_by WHERE '.implode(' AND ',$where);
+        $total=(int)($this->db->fetchOne('SELECT COUNT(*) c '.$base,$params)['c']??0);
+        $params['limit']=$limit;$params['offset']=$offset;
+        $rows=$this->db->fetchAll(
+            'SELECT pm.*,p.code party_code,p.name party_name,u.full_name user_name,
+                    ch.cheque_no,ch.bank,ch.cheque_date,ch.status cheque_status,
+                    pu.doc_no purchase_doc
+             '.$base.' ORDER BY pm.payment_date DESC,pm.id DESC LIMIT :limit OFFSET :offset',
+            $params
+        );
+        return ['rows'=>$rows,'total'=>$total];
+    }
+
+    public function suppliers(string $q):array
+    {
+        return $this->db->fetchAll(
+            "SELECT id,code,name
+             FROM parties
+             WHERE party_type='SUPPLIER' AND active=1
+               AND (code LIKE :q OR name LIKE :q OR phone LIKE :q)
+             ORDER BY name LIMIT 30",
+            ['q'=>'%'.$q.'%']
+        );
+    }
+
     public function post(array $input, int $userId): array
     {
         $date=(string)($input['payment_date']??date('Y-m-d'));
