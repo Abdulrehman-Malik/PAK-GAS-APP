@@ -32,21 +32,17 @@ final class PosService
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             throw new \InvalidArgumentException('Transaction date is invalid.');
         }
-
-        if (!in_array($txnType, ['GAS_SALE', 'EMPTY_CYLINDER_SALE'], true)) {
+        if (!in_array($txnType, ['GAS_SALE', 'EMPTY_CYLINDER_SALE', 'CYLINDER_RETURN'], true)) {
             throw new \InvalidArgumentException('Transaction type is not supported.');
         }
-
         if (!in_array($method, ['CASH', 'ONLINE', 'CHEQUE'], true)) {
             throw new \InvalidArgumentException('Payment method is invalid.');
         }
-
         if (bccomp($received, '0.00', 2) < 0) {
             throw new \InvalidArgumentException('Received amount cannot be negative.');
         }
-
         if ($customerId < 1 || !is_array($lines) || $lines === []) {
-            throw new \InvalidArgumentException('Customer and at least one cylinder are required.');
+            throw new \InvalidArgumentException('Customer and at least one line are required.');
         }
 
         return $this->db->transaction(function () use (
@@ -66,7 +62,6 @@ final class PosService
                  FOR UPDATE",
                 ['id' => $customerId]
             );
-
             if (!$party) {
                 throw new \InvalidArgumentException('Customer is invalid or inactive.');
             }
@@ -90,7 +85,9 @@ final class PosService
                 if ($txnType === 'EMPTY_CYLINDER_SALE') {
                     $type = 'SELL_EMPTY';
                     $gas = '0.000';
-                } elseif (!in_array($type, ['ISSUE', 'SELL_FILLED'], true)) {
+                } elseif ($txnType === 'CYLINDER_RETURN') {
+                    $type = 'RETURN';
+                } elseif (!in_array($type, ['ISSUE', 'SELL_FILLED', 'RETURN'], true)) {
                     throw new \InvalidArgumentException('Invalid line type for Gas Sale.');
                 }
 
@@ -102,7 +99,6 @@ final class PosService
                      FOR UPDATE',
                     ['id' => $cid]
                 );
-
                 if (!$cylinder || $cylinder['condition_code'] !== 'GOOD') {
                     throw new \InvalidArgumentException('Cylinder is unavailable.');
                 }
@@ -110,88 +106,18 @@ final class PosService
                 $before = (string) $cylinder['gas_kg'];
                 $capacity = (string) $cylinder['capacity_kg'];
 
-                $resolved = $this->rates->resolve((int) $cylinder['group_id'], $date);
-
-                if (bccomp($rate, '0.00', 2) <= 0) {
-                    $rate = (string) $resolved['gas_rate'];
-                }
-
-                if (bccomp($cprice, '0.00', 2) <= 0) {
-                    $cprice = (string) $resolved['cylinder_price'];
-                }
-
-                if (bccomp($gas, '0.000', 3) < 0 || bccomp($gas, $capacity, 3) > 0) {
-                    throw new \InvalidArgumentException('Gas quantity exceeds cylinder capacity.');
-                }
-
-                if (in_array($type, ['ISSUE', 'SELL_FILLED'], true) && bccomp($rate, '0.00', 2) <= 0) {
-                    throw new \InvalidArgumentException('Gas rate must be greater than zero.');
-                }
-
-                if (in_array($type, ['SELL_FILLED', 'SELL_EMPTY'], true) && bccomp($cprice, '0.00', 2) <= 0) {
-                    throw new \InvalidArgumentException('Cylinder price must be greater than zero.');
-                }
-
-                if ($type === 'ISSUE') {
-                    if ($cylinder['location'] !== 'SHOP') {
-                        throw new \InvalidArgumentException('Cylinder ' . $cylinder['code'] . ' is no longer available.');
+                if ($type === 'RETURN') {
+                    if ($cylinder['location'] !== 'CUSTOMER' || (int) $cylinder['customer_id'] !== $customerId) {
+                        throw new \InvalidArgumentException('Cylinder ' . $cylinder['code'] . ' is not held by this customer.');
                     }
-
-                    if (bccomp($gas, $before, 3) > 0) {
-                        throw new \InvalidArgumentException(
-                            'Gas quantity for ' . $cylinder['code'] . ' cannot exceed available gas of ' . $before . ' kg.'
-                        );
-                    }
-
-                    if (bccomp($gas, '0.000', 3) <= 0) {
-                        throw new \InvalidArgumentException('Gas quantity must be greater than zero.');
-                    }
-
-                    $amount = bcmul($gas, $rate, 2);
-                    $issue = bcadd($issue, $amount, 2);
-                    $to = 'CUSTOMER';
-                    $after = bcsub($before, $gas, 3);
-                } elseif ($type === 'SELL_FILLED') {
-                    if ($cylinder['location'] !== 'SHOP') {
-                        throw new \InvalidArgumentException('Cylinder ' . $cylinder['code'] . ' is no longer available.');
-                    }
-
-                    if (bccomp($before, '0.000', 3) <= 0) {
-                        throw new \InvalidArgumentException('Only a cylinder containing gas can be sold as Filled.');
-                    }
-
-                    // A filled-cylinder sale transfers the physical cylinder and all gas in it.
-                    // Allowing a smaller gas quantity would silently destroy the remaining gas.
-                    if (bccomp($gas, $before, 3) !== 0) {
-                        throw new \InvalidArgumentException(
-                            'Filled-cylinder sale must sell the full available gas of ' . $before . ' kg.'
-                        );
-                    }
-
-                    $amount = bcadd(bcmul($gas, $rate, 2), $cprice, 2);
-                    $sold = bcadd($sold, $amount, 2);
-                    $to = 'SOLD';
-                    $after = '0.000';
-                } elseif ($type === 'SELL_EMPTY') {
-                    if ($cylinder['location'] !== 'SHOP' || bccomp($before, '0.000', 3) !== 0) {
-                        throw new \InvalidArgumentException('Only an empty shop cylinder can be sold as Empty.');
-                    }
-
-                    $amount = $cprice;
-                    $sold = bcadd($sold, $amount, 2);
-                    $to = 'SOLD';
-                    $after = '0.000';
-                    $gas = '0.000';
-                } elseif ($type === 'RETURN') {
-                    if (
-                        $cylinder['location'] !== 'CUSTOMER'
-                        || (int) $cylinder['customer_id'] !== $customerId
-                    ) {
-                        throw new \InvalidArgumentException('Cylinder is not held by this customer.');
-                    }
-
-                    if (bccomp($gas, $capacity, 3) > 0 || bccomp($gas, '0.000', 3) < 0) {
+                    if (bccomp($gas, '0.000', 3) < 0 || bccomp($gas, $capacity, 3) > 0) {
                         throw new \InvalidArgumentException('Returned gas is outside the cylinder capacity.');
+                    }
+                    if (bccomp($rate, '0.00', 2) <= 0) {
+                        $rate = $this->issueRateForCylinder($cid, $date);
+                    }
+                    if (bccomp($rate, '0.00', 2) <= 0) {
+                        throw new \InvalidArgumentException('Return rate must be greater than zero.');
                     }
 
                     $credit = bcmul($gas, $rate, 2);
@@ -199,8 +125,67 @@ final class PosService
                     $returned = bcadd($returned, $credit, 2);
                     $to = 'SHOP';
                     $after = $gas;
+                    $cprice = '0.00';
                 } else {
-                    throw new \InvalidArgumentException('Unsupported sale line.');
+                    $resolved = $this->rates->resolve((int) $cylinder['group_id'], $date);
+                    if (bccomp($rate, '0.00', 2) <= 0) {
+                        $rate = (string) $resolved['gas_rate'];
+                    }
+                    if (bccomp($cprice, '0.00', 2) <= 0) {
+                        $cprice = (string) $resolved['cylinder_price'];
+                    }
+
+                    if (bccomp($gas, '0.000', 3) < 0 || bccomp($gas, $capacity, 3) > 0) {
+                        throw new \InvalidArgumentException('Gas quantity exceeds cylinder capacity.');
+                    }
+
+                    if ($type === 'ISSUE') {
+                        if ($cylinder['location'] !== 'SHOP') {
+                            throw new \InvalidArgumentException('Cylinder ' . $cylinder['code'] . ' is no longer available.');
+                        }
+                        if (bccomp($gas, $before, 3) > 0) {
+                            throw new \InvalidArgumentException(
+                                'Gas quantity for ' . $cylinder['code'] . ' cannot exceed available gas of ' . $before . ' kg.'
+                            );
+                        }
+                        if (bccomp($gas, '0.000', 3) <= 0 || bccomp($rate, '0.00', 2) <= 0) {
+                            throw new \InvalidArgumentException('Gas quantity and rate must be greater than zero.');
+                        }
+                        $amount = bcmul($gas, $rate, 2);
+                        $issue = bcadd($issue, $amount, 2);
+                        $to = 'CUSTOMER';
+                        $after = bcsub($before, $gas, 3);
+                    } elseif ($type === 'SELL_FILLED') {
+                        if ($cylinder['location'] !== 'SHOP') {
+                            throw new \InvalidArgumentException('Cylinder ' . $cylinder['code'] . ' is no longer available.');
+                        }
+                        if (bccomp($before, '0.000', 3) <= 0 || bccomp($gas, $before, 3) !== 0) {
+                            throw new \InvalidArgumentException(
+                                'Filled-cylinder sale must sell the full available gas of ' . $before . ' kg.'
+                            );
+                        }
+                        if (bccomp($rate, '0.00', 2) <= 0 || bccomp($cprice, '0.00', 2) <= 0) {
+                            throw new \InvalidArgumentException('Gas rate and cylinder price must be greater than zero.');
+                        }
+                        $amount = bcadd(bcmul($gas, $rate, 2), $cprice, 2);
+                        $sold = bcadd($sold, $amount, 2);
+                        $to = 'SOLD';
+                        $after = '0.000';
+                    } elseif ($type === 'SELL_EMPTY') {
+                        if ($cylinder['location'] !== 'SHOP' || bccomp($before, '0.000', 3) !== 0) {
+                            throw new \InvalidArgumentException('Only an empty shop cylinder can be sold as Empty.');
+                        }
+                        if (bccomp($cprice, '0.00', 2) <= 0) {
+                            throw new \InvalidArgumentException('Cylinder price must be greater than zero.');
+                        }
+                        $amount = $cprice;
+                        $sold = bcadd($sold, $amount, 2);
+                        $to = 'SOLD';
+                        $after = '0.000';
+                        $gas = '0.000';
+                    } else {
+                        throw new \InvalidArgumentException('Unsupported sale line.');
+                    }
                 }
 
                 $saleLines[] = [
@@ -223,8 +208,7 @@ final class PosService
             $newBalance = bcadd($oldBalance, bcsub($net, $received, 2), 2);
 
             $creditSetting = $this->db->fetchOne(
-                "SELECT setting_value
-                 FROM settings
+                "SELECT setting_value FROM settings
                  WHERE setting_group = 'sales_credit' AND setting_key = 'credit_enforcement'"
             );
             $enforcement = strtoupper((string) ($creditSetting['setting_value'] ?? 'BLOCK'));
@@ -232,7 +216,6 @@ final class PosService
             if ($enforcement === 'BLOCK' && bccomp($newBalance, '0.00', 2) > 0) {
                 $allowCredit = (int) $party['allow_credit'];
                 $creditLimit = (string) $party['credit_limit'];
-
                 if (!$allowCredit || bccomp($newBalance, $creditLimit, 2) > 0) {
                     throw new \InvalidArgumentException(
                         'Credit limit exceeded. Current balance would be ' . $newBalance . '.'
@@ -240,12 +223,11 @@ final class PosService
                 }
             }
 
-            if ($received !== '0.00' && $method === 'CASH' && $counterId < 1) {
+            if (bccomp($received, '0.00', 2) > 0 && $method === 'CASH' && $counterId < 1) {
                 throw new \InvalidArgumentException('A cash counter is required for cash payments.');
             }
 
             $doc = $this->docs->next('SALE');
-
             $this->db->execute(
                 'INSERT INTO sales
                  (doc_no, txn_date, customer_id, counter_id, issue_total, cylinder_sale_total, return_total,
@@ -265,8 +247,7 @@ final class PosService
                     'user' => $userId,
                 ]
             );
-
-            $saleId = (int) $this->db->pdo()->lastInsertId();
+            $saleId = $this->db->lastInsertId();
 
             foreach ($saleLines as $line) {
                 $this->db->execute(
@@ -299,35 +280,18 @@ final class PosService
                 );
             }
 
-            if (bccomp($net, '0.00', 2) > 0) {
-                $this->ledger->post(
-                    $customerId,
-                    $date,
-                    'SALE',
-                    $saleId,
-                    $net,
-                    '0.00',
-                    'Sale ' . $doc,
-                    $userId
-                );
+            if (bccomp($issue, '0.00', 2) > 0) {
+                $this->ledger->post($customerId, $date, 'SALE', $saleId, $issue, '0.00', 'Gas sale ' . $doc, $userId);
             }
-
+            if (bccomp($sold, '0.00', 2) > 0) {
+                $this->ledger->post($customerId, $date, 'SALE', $saleId, $sold, '0.00', 'Cylinder sale ' . $doc, $userId);
+            }
             if (bccomp($returned, '0.00', 2) > 0) {
-                $this->ledger->post(
-                    $customerId,
-                    $date,
-                    'SALE_RETURN',
-                    $saleId,
-                    '0.00',
-                    $returned,
-                    'Return credit ' . $doc,
-                    $userId
-                );
+                $this->ledger->post($customerId, $date, 'SALE_RETURN', $saleId, '0.00', $returned, 'Return credit ' . $doc, $userId);
             }
 
             if (bccomp($received, '0.00', 2) > 0) {
                 $receipt = $this->docs->next('RECEIPT');
-
                 $this->db->execute(
                     'INSERT INTO receipts
                      (doc_no, receipt_date, party_id, amount, method, counter_id, source, sale_id, created_by)
@@ -343,39 +307,22 @@ final class PosService
                         'user' => $userId,
                     ]
                 );
-
-                $receiptId = (int) $this->db->pdo()->lastInsertId();
-
-                $this->ledger->post(
-                    $customerId,
-                    $date,
-                    'RECEIPT',
-                    $receiptId,
-                    '0.00',
-                    $received,
-                    'Receipt ' . $receipt,
-                    $userId
-                );
-
+                $receiptId = $this->db->lastInsertId();
+                $this->ledger->post($customerId, $date, 'RECEIPT', $receiptId, '0.00', $received, 'Receipt ' . $receipt, $userId);
                 if ($method === 'CASH') {
-                    $this->cash->post(
-                        $counterId,
-                        $date,
-                        'IN',
-                        $received,
-                        'RECEIPT',
-                        $receiptId,
-                        $userId
-                    );
+                    $this->cash->post($counterId, $date, 'IN', $received, 'RECEIPT', $receiptId, $userId);
                 }
             }
 
-            $this->audit->record($userId, 'CREATE', 'sales', $saleId, null, [
-                'doc_no' => $doc,
-                'transaction_type' => $txnType,
-                'net_amount' => $net,
-                'received_amount' => $received,
-            ], null);
+            $this->audit->record(
+                $userId,
+                'CREATE',
+                'sales',
+                $saleId,
+                null,
+                ['doc_no' => $doc, 'net_amount' => $net, 'received_amount' => $received],
+                null
+            );
 
             return [
                 'id' => $saleId,
@@ -385,5 +332,183 @@ final class PosService
                 'balance_after' => $newBalance,
             ];
         });
+    }
+
+    public function void(int $saleId, int $userId, string $reason): void
+    {
+        $reason = trim($reason);
+        if ($reason === '') {
+            throw new \InvalidArgumentException('Void reason is required.');
+        }
+
+        $this->db->transaction(function () use ($saleId, $userId, $reason): void {
+            $sale = $this->db->fetchOne('SELECT * FROM sales WHERE id = :id FOR UPDATE', ['id' => $saleId]);
+            if (!$sale) {
+                throw new \InvalidArgumentException('Sale not found.');
+            }
+            if ($sale['status'] !== 'POSTED') {
+                throw new \InvalidArgumentException('Sale is already void.');
+            }
+
+            $lines = $this->db->fetchAll(
+                'SELECT sl.*, c.code
+                 FROM sale_lines sl
+                 INNER JOIN cylinders c ON c.id = sl.cylinder_id
+                 WHERE sl.sale_id = :sale
+                 ORDER BY sl.id
+                 FOR UPDATE',
+                ['sale' => $saleId]
+            );
+
+            foreach ($lines as $line) {
+                $later = $this->db->fetchOne(
+                    'SELECT m.id, m.movement_type
+                     FROM cylinder_movements m
+                     WHERE m.cylinder_id = :cylinder
+                       AND m.id > (
+                           SELECT MAX(m2.id)
+                           FROM cylinder_movements m2
+                           WHERE m2.source_document_type = \'SALE\'
+                             AND m2.source_document_id = :sale
+                             AND m2.cylinder_id = :cylinder2
+                       )
+                     ORDER BY m.id
+                     LIMIT 1',
+                    ['cylinder' => $line['cylinder_id'], 'sale' => $saleId, 'cylinder2' => $line['cylinder_id']]
+                );
+                if ($later) {
+                    throw new \InvalidArgumentException(
+                        'Cannot void sale: cylinder ' . $line['code'] .
+                        ' has a later ' . $later['movement_type'] . ' movement.'
+                    );
+                }
+            }
+
+            foreach ($lines as $line) {
+                $movement = $this->db->fetchOne(
+                    'SELECT * FROM cylinder_movements
+                     WHERE source_document_type = \'SALE\'
+                       AND source_document_id = :sale
+                       AND cylinder_id = :cylinder
+                     ORDER BY id DESC LIMIT 1 FOR UPDATE',
+                    ['sale' => $saleId, 'cylinder' => $line['cylinder_id']]
+                );
+                if (!$movement) {
+                    throw new \InvalidArgumentException('Sale movement is missing for cylinder ' . $line['code'] . '.');
+                }
+
+                if ($line['line_type'] === 'RETURN') {
+                    $to = 'CUSTOMER';
+                    $customerId = (int) $sale['customer_id'];
+                    $after = (string) $movement['before_gas_kg'];
+                } else {
+                    $to = 'SHOP';
+                    $customerId = null;
+                    $after = (string) $movement['before_gas_kg'];
+                }
+
+                $this->stock->moveCylinder(
+                    (int) $line['cylinder_id'],
+                    $to,
+                    $customerId,
+                    $after,
+                    'SALE_VOID',
+                    (string) $line['rate'],
+                    'SALE_VOID',
+                    $saleId,
+                    $userId
+                );
+            }
+
+            foreach ($this->ledger->entriesForDocument('SALE', $saleId) as $entry) {
+                $this->ledger->reverseEntry($entry, (string) $sale['txn_date'], $userId, 'Void sale ' . $sale['doc_no']);
+            }
+            foreach ($this->ledger->entriesForDocument('SALE_RETURN', $saleId) as $entry) {
+                $this->ledger->reverseEntry($entry, (string) $sale['txn_date'], $userId, 'Void sale return ' . $sale['doc_no']);
+            }
+
+            $receipts = $this->db->fetchAll(
+                'SELECT * FROM receipts WHERE sale_id = :sale AND status = \'POSTED\' FOR UPDATE',
+                ['sale' => $saleId]
+            );
+            foreach ($receipts as $receipt) {
+                foreach ($this->ledger->entriesForDocument('RECEIPT', (int) $receipt['id']) as $entry) {
+                    $this->ledger->reverseEntry(
+                        $entry,
+                        (string) $receipt['receipt_date'],
+                        $userId,
+                        'Void POS receipt ' . $receipt['doc_no']
+                    );
+                }
+                if ($receipt['method'] === 'CASH') {
+                    $this->cash->reverseDocument('RECEIPT', (int) $receipt['id'], (string) $receipt['receipt_date'], $userId);
+                }
+                $this->db->execute(
+                    'UPDATE receipts SET status = \'VOID\' WHERE id = :id',
+                    ['id' => $receipt['id']]
+                );
+            }
+
+            $this->db->execute(
+                'UPDATE sales
+                 SET status = \'VOID\', void_reason = :reason, voided_at = NOW(), voided_by = :user
+                 WHERE id = :id',
+                ['reason' => $reason, 'user' => $userId, 'id' => $saleId]
+            );
+
+            $this->audit->record(
+                $userId,
+                'VOID',
+                'sales',
+                $saleId,
+                ['status' => 'POSTED'],
+                ['status' => 'VOID', 'reason' => $reason],
+                null
+            );
+        });
+    }
+
+    public function issuedToCustomer(int $customerId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT c.id, c.code, c.group_id, cg.code AS group_code, cg.name AS group_name,
+                    cg.capacity_kg, c.gas_kg,
+                    COALESCE((
+                        SELECT m.rate
+                        FROM cylinder_movements m
+                        WHERE m.cylinder_id = c.id
+                          AND m.movement_type = 'ISSUE'
+                        ORDER BY m.id DESC LIMIT 1
+                    ), 0) AS issue_rate,
+                    COALESCE((
+                        SELECT DATE(m.created_at)
+                        FROM cylinder_movements m
+                        WHERE m.cylinder_id = c.id
+                          AND m.movement_type = 'ISSUE'
+                        ORDER BY m.id DESC LIMIT 1
+                    ), DATE(c.created_at)) AS issue_date
+             FROM cylinders c
+             INNER JOIN cylinder_groups cg ON cg.id = c.group_id
+             WHERE c.active = 1 AND c.condition_code = 'GOOD'
+               AND c.location = 'CUSTOMER' AND c.customer_id = :customer
+             ORDER BY c.code",
+            ['customer' => $customerId]
+        );
+    }
+
+    private function issueRateForCylinder(int $cylinderId, string $date): string
+    {
+        $row = $this->db->fetchOne(
+            "SELECT rate FROM cylinder_movements
+             WHERE cylinder_id = :cylinder AND movement_type = 'ISSUE'
+             ORDER BY id DESC LIMIT 1",
+            ['cylinder' => $cylinderId]
+        );
+
+        if ($row && bccomp((string) $row['rate'], '0.00', 2) > 0) {
+            return (string) $row['rate'];
+        }
+
+        return '0.00';
     }
 }
