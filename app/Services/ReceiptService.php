@@ -16,6 +16,56 @@ final class ReceiptService
     ) {
     }
 
+    public function printData(?int $receiptId, ?int $saleId): array
+    {
+        if(($receiptId??0)>0){
+            $receipt=$this->db->fetchOne(
+                'SELECT r.*,p.code customer_code,p.name customer_name,s.doc_no sale_doc,s.txn_date sale_date,
+                        ch.cheque_no,ch.bank,ch.cheque_date,ch.status cheque_status
+                 FROM receipts r
+                 INNER JOIN parties p ON p.id=r.party_id
+                 LEFT JOIN sales s ON s.id=r.sale_id
+                 LEFT JOIN cheques ch ON ch.id=r.cheque_id
+                 WHERE r.id=:id',
+                ['id'=>$receiptId]
+            );
+            if(!$receipt)throw new \InvalidArgumentException('Receipt not found.');
+            $saleId=(int)($receipt['sale_id']??0);
+        }elseif(($saleId??0)>0){
+            $receipt=null;
+            $receipt=$this->db->fetchOne(
+                'SELECT r.*,p.code customer_code,p.name customer_name,s.doc_no sale_doc,s.txn_date sale_date
+                 FROM receipts r INNER JOIN parties p ON p.id=r.party_id
+                 INNER JOIN sales s ON s.id=r.sale_id
+                 WHERE r.sale_id=:sale ORDER BY r.id DESC LIMIT 1',
+                ['sale'=>$saleId]
+            );
+            if(!$receipt){
+                $sale=$this->db->fetchOne(
+                    'SELECT s.*,p.code customer_code,p.name customer_name
+                     FROM sales s INNER JOIN parties p ON p.id=s.customer_id WHERE s.id=:id',
+                    ['id'=>$saleId]
+                );
+                if(!$sale)throw new \InvalidArgumentException('Sale not found.');
+                $receipt=$sale;
+            }
+        }else{
+            throw new \InvalidArgumentException('Receipt or sale is required.');
+        }
+
+        $lines=[];
+        if(($saleId??0)>0){
+            $lines=$this->db->fetchAll(
+                'SELECT sl.*,c.code cylinder_code,cg.name group_name
+                 FROM sale_lines sl INNER JOIN cylinders c ON c.id=sl.cylinder_id
+                 INNER JOIN cylinder_groups cg ON cg.id=c.group_id
+                 WHERE sl.sale_id=:sale ORDER BY sl.id',
+                ['sale'=>$saleId]
+            );
+        }
+        return ['receipt'=>$receipt,'lines'=>$lines];
+    }
+
     public function list(array $where, array $params, int $limit, int $offset): array
     {
         $params['limit']=$limit;
