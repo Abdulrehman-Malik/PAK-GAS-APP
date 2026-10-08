@@ -10,16 +10,18 @@ $(function(){
     };
 
 
-    function activateTab(tab){
-        const target=tab.getAttribute('data-bs-target')||tab.getAttribute('href');
+    window.Lpg.activateTab=function(tab){
+        const target=tab.getAttribute('data-lpg-tab-target')||tab.getAttribute('data-bs-target')||tab.getAttribute('href');
         if(!target||!target.startsWith('#')){return false;}
 
-        const container=tab.closest('[role="tablist"]');
-        const scope=container ? container.parentElement : document;
-        const tabs=scope.querySelectorAll('[data-bs-toggle="tab"]');
+        const tabList=tab.closest('[role="tablist"]');
+        const scope=tabList ? tabList.parentElement : document;
+        const tabs=tabList
+            ? tabList.querySelectorAll('[data-lpg-tab-target],[data-bs-toggle="tab"]')
+            : scope.querySelectorAll('[data-lpg-tab-target],[data-bs-toggle="tab"]');
 
         tabs.forEach(function(item){
-            const itemTarget=item.getAttribute('data-bs-target')||item.getAttribute('href');
+            const itemTarget=item.getAttribute('data-lpg-tab-target')||item.getAttribute('data-bs-target')||item.getAttribute('href');
             const active=item===tab;
             item.classList.toggle('active',active);
             item.setAttribute('aria-selected',active?'true':'false');
@@ -28,24 +30,23 @@ $(function(){
             if(itemTarget && itemTarget.startsWith('#')){
                 const pane=scope.querySelector(itemTarget);
                 if(pane){
-                    const paneActive=item===tab;
-                    pane.classList.toggle('show',paneActive);
-                    pane.classList.toggle('active',paneActive);
-                    pane.setAttribute('aria-hidden',paneActive?'false':'true');
+                    pane.classList.toggle('show',active);
+                    pane.classList.toggle('active',active);
+                    pane.setAttribute('aria-hidden',active?'false':'true');
                 }
             }
         });
 
-        return true;
-    }
+        return false;
+    };
 
-    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab){
-        tab.addEventListener('click',function(event){
-            event.preventDefault();
-            event.stopPropagation();
-            activateTab(this);
-        },true);
-    });
+    document.addEventListener('click',function(event){
+        const tab=event.target.closest && event.target.closest('[data-lpg-tab-target]');
+        if(!tab){return;}
+        event.preventDefault();
+        event.stopPropagation();
+        window.Lpg.activateTab(tab);
+    },true);
 
     const storageKey='pak-gas-sidebar-collapsed';
     const $body=$('body');
