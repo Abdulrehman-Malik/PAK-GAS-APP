@@ -228,8 +228,9 @@ final class PurchaseService
             }
 
             $doc = $this->docs->next('PURCHASE');
+            $effectivePaid = ($method === 'CHEQUE' && $this->chequePostingMode() === 'ON_CLEARANCE') ? '0.00' : $paid;
             $oldBalance = $this->ledger->balance($supplierId);
-            $newBalance = bcadd($oldBalance, bcsub($total, $paid, 2), 2);
+            $newBalance = bcadd($oldBalance, bcsub($total, $effectivePaid, 2), 2);
 
             $this->db->execute(
                 'INSERT INTO purchases
@@ -451,34 +452,58 @@ final class PurchaseService
                     ]
                 );
                 if ($later) {
-                    throw new \InvalidArgumentException(
+                    throw new InvalidArgumentException(
                         'Cannot void purchase: cylinder ' . $movement['code'] . ' has later ' .
                         $later['movement_type'] . ' movement. Void that document first.'
                     );
                 }
             }
 
-            foreach ($movements as $movement) {
-                $this->db->execute(
-                    'UPDATE cylinders
-                     SET gas_kg = 0.000, location = \'SHOP\', customer_id = NULL,
-                         active = 0, updated_by = :user
-                     WHERE id = :id',
-                    ['user' => $userId, 'id' => $movement['cylinder_id']]
+            foreach (array_reverse($movements) as $movement) {
+                $cylinder = $this->db->fetchOne(
+                    'SELECT * FROM cylinders WHERE id=:id FOR UPDATE',
+                    ['id'=>$movement['cylinder_id']]
                 );
+                if (!$cylinder) {
+                    throw new InvalidArgumentException('Cylinder no longer exists.');
+                }
+
+                $isNew = $movement['movement_type'] === 'PURCHASE_NEW';
+                if ($isNew) {
+                    $this->db->execute(
+                        "UPDATE cylinders
+                         SET gas_kg=0.000,location='SHOP',customer_id=NULL,active=0,updated_by=:user
+                         WHERE id=:id",
+                        ['user'=>$userId,'id'=>$movement['cylinder_id']]
+                    );
+                } else {
+                    $this->db->execute(
+                        'UPDATE cylinders
+                         SET gas_kg=:gas,location=:location,customer_id=:customer,updated_by=:user
+                         WHERE id=:id',
+                        [
+                            'gas'=>$movement['before_gas_kg'],
+                            'location'=>$movement['from_location'],
+                            'customer'=>$movement['from_location']==='CUSTOMER'?$movement['customer_id']:null,
+                            'user'=>$userId,'id'=>$movement['cylinder_id']
+                        ]
+                    );
+                }
+
                 $this->db->execute(
-                    'INSERT INTO cylinder_movements
-                     (cylinder_id, movement_type, before_gas_kg, after_gas_kg, from_location, to_location,
-                      customer_id, rate, source_document_type, source_document_id, created_by)
-                     VALUES (:cylinder, \'VOID_REVERSAL\', :before, 0.000, :from_location, \'SHOP\',
-                             NULL, :rate, \'PURCHASE_VOID\', :purchase, :user)',
+                    "INSERT INTO cylinder_movements
+                     (cylinder_id,movement_type,before_gas_kg,after_gas_kg,from_location,to_location,customer_id,rate,source_document_type,source_document_id,created_by)
+                     VALUES (:cylinder,'VOID_REVERSAL',:before,:after,:from_location,:to_location,:customer,:rate,'PURCHASE_VOID',:purchase,:user)",
                     [
-                        'cylinder' => $movement['cylinder_id'],
-                        'before' => $movement['after_gas_kg'],
-                        'from_location' => $movement['to_location'],
-                        'rate' => $movement['rate'],
-                        'purchase' => $purchaseId,
-                        'user' => $userId,
+                        'cylinder'=>$movement['cylinder_id'],
+                        'before'=>$cylinder['gas_kg'],
+                        'after'=>$movement['before_gas_kg'],
+                        'from_location'=>$cylinder['location'],
+                        'to_location'=>$movement['from_location'],
+                        'customer'=>$movement['customer_id'],
+                        'rate'=>$movement['rate'],
+                        'purchase'=>$purchaseId,
+                        'user'=>$userId
                     ]
                 );
             }
