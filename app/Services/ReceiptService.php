@@ -104,19 +104,23 @@ final class ReceiptService
                 'SELECT * FROM cheques WHERE receipt_id = :receipt ORDER BY id DESC LIMIT 1 FOR UPDATE',
                 ['receipt' => $receiptId]
             );
-            if ($cheque && $cheque['status'] === 'CLEARED') {
+            if ($cheque && $cheque['status'] === 'PENDING') {
+                $this->db->execute(
+                    'UPDATE cheques SET status = \'BOUNCED\', bounced_reason = :reason WHERE id = :id',
+                    ['reason' => 'Receipt void: ' . $reason, 'id' => $cheque['id']]
+                );
+            } else {
                 foreach ($this->ledger->entriesForDocument('RECEIPT', $receiptId) as $entry) {
-                    $this->ledger->reverseEntry($entry, (string) $receipt['receipt_date'], $userId, 'Void receipt ' . $receipt['doc_no']);
+                    $this->ledger->reverseEntry(
+                        $entry,
+                        (string) $receipt['receipt_date'],
+                        $userId,
+                        'Void receipt ' . $receipt['doc_no']
+                    );
                 }
-            } elseif (!$cheque) {
-                foreach ($this->ledger->entriesForDocument('RECEIPT', $receiptId) as $entry) {
-                    $this->ledger->reverseEntry($entry, (string) $receipt['receipt_date'], $userId, 'Void receipt ' . $receipt['doc_no']);
-                }
-                if ($receipt['method'] === 'CASH') {
+                if (!$cheque && $receipt['method'] === 'CASH') {
                     $this->cash->reverseDocument('RECEIPT', $receiptId, (string) $receipt['receipt_date'], $userId);
                 }
-            } else {
-                throw new \InvalidArgumentException('Pending cheque receipt must be voided before clearance.');
             }
 
             $this->db->execute(
