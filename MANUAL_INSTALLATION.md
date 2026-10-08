@@ -1,53 +1,52 @@
 # Windows / XAMPP Installation Guide — Pak Gas POS
 
-This is the supported installation procedure for Windows using XAMPP.
-The database is created and initialized from one file: database/schema.sql.
-There are no migration scripts.
+The supported installation flow is now the browser-based Installation page.
+
+You only need to configure .env, start Apache/MySQL, and open the application.
 
 ## 1. Install XAMPP
 
-Install XAMPP with Apache, MySQL and PHP 8.1 or newer.
-Recommended: use the current XAMPP release that provides PHP 8.1+.
+Install XAMPP with:
+- Apache
+- MySQL
+- PHP 8.1+
 
-Enable these PHP extensions in XAMPP php.ini:
-- PDO MySQL (pdo_mysql)
-- BCMath (bcmath)
-- mbstring
-- fileinfo
-- zip
-- xml
+The application requires these PHP extensions:
 
-Restart Apache after changing php.ini.
+| Requirement | Purpose |
+|---|---|
+| PDO | Database access |
+| PDO MySQL | MySQL/MariaDB database driver |
+| BCMath | Decimal-safe application calculations |
+| mbstring | Multibyte string handling |
+| fileinfo | Upload/file validation |
+| zip | XLSX import/export |
+| xml | XLSX XML parsing |
 
-Verify in Command Prompt:
+The Installation page checks these automatically. If one is disabled, it shows the missing item and tells you to enable it.
 
-```bat
-php -v
-php -m
-```
+After changing php.ini, restart Apache.
 
 ## 2. Copy the project
 
-Copy the full repository to:
+Copy the project to:
 
-```text
+~~~text
 C:\xampp\htdocs\pak-gas-app\
-```
+~~~
 
-Do not delete the app, bin, database, public or storage folders.
+Do not make the repository root an Apache web root.
 
-## 3. Configure .env
+## 3. Create .env
 
-Open Command Prompt:
-
-```bat
+~~~bat
 cd C:\xampp\htdocs\pak-gas-app
 copy .env.example .env
-```
+~~~
 
-Set these values in .env:
+Set the database information and administrator credentials in .env:
 
-```dotenv
+~~~dotenv
 APP_ENV=development
 APP_URL=http://localhost/pak-gas-app/public
 APP_NAME=Pak Gas POS
@@ -64,98 +63,50 @@ SESSION_SECURE_COOKIE=false
 
 SEED_ADMIN_USERNAME=admin
 SEED_ADMIN_PASSWORD=ChangeMeImmediately!
-```
+~~~
 
-DB_NAME must match the database created by database/schema.sql.
-For a different deployment URL or tunnel, change only APP_URL in .env.
+The installer reads the database information directly from this file. It does not need DB values entered into a separate installation form.
 
-## 4. Start XAMPP MySQL
+Change SEED_ADMIN_PASSWORD to a secure password before installation.
 
-Open XAMPP Control Panel and start MySQL.
-Apache can be started now as well, or after the database setup.
+## 4. Start XAMPP
 
-## 5. Create the database and all tables
+Start Apache and MySQL from the XAMPP Control Panel.
 
-Open Command Prompt as a user that can access the XAMPP MySQL installation:
+## 5. Run the installer
 
-```bat
-cd C:\xampp\htdocs\pak-gas-app
-C:\xampp\mysql\bin\mysql.exe -u root -p < database\schema.sql
-```
+Open:
 
-When the XAMPP root account has no password:
+~~~text
+http://localhost/pak-gas-app/public/
+~~~
 
-```bat
-C:\xampp\mysql\bin\mysql.exe -u root < database\schema.sql
-```
+The application automatically redirects to /install when the installation is incomplete.
 
-database/schema.sql creates the pak_gas database and then creates all tables, indexes, views and static seed records.
+The Installation page performs the whole setup:
 
-## 6. Verify database setup
+1. Validates PHP and mandatory extensions.
+2. Checks the database connection from .env.
+3. Creates DB_NAME automatically when it does not exist.
+4. Imports database/schema.sql.
+5. Creates the migration tracking table.
+6. Runs any queued migration files.
+7. Seeds the Administrator from .env.
+8. Redirects to the Login page.
 
-Run:
+There is no need to use phpMyAdmin, the MySQL client, or php bin\seed.php.
 
-```bat
-C:\xampp\mysql\bin\mysql.exe -u root -p -e "USE pak_gas; SHOW TABLES;"
-```
-
-Confirm that tables include at least:
-
-- users
-- roles
-- permissions
-- settings
-- parties
-- cylinder_groups
-- cylinders
-- cylinder_movements
-- rates
-- stock_batches
-- sales
-- sale_lines
-- purchases
-- purchase_lines
-- payments
-- receipts
-- counter_sessions
-- cash_entries
-- cheques
-- expense_categories
-- expenses
-- audit_log
-
-Views should also exist:
-
-- v_cylinder_status
-- v_shop_stock_summary
-- v_party_balance
-
-## 7. Create the administrator
-
-From the repository root:
-
-```bat
-php bin\seed.php
-```
-
-This uses SEED_ADMIN_USERNAME and SEED_ADMIN_PASSWORD from .env.
-The administrator is forced to change its password after first login.
-
-Roles, permissions, default settings, Main Counter, document sequences and expense categories are already seeded by database/schema.sql.
-
-## 8. Configure Apache
-
-Apache should expose only the public folder.
+## 6. Apache configuration
 
 Recommended DocumentRoot:
 
-```text
+~~~text
 C:/xampp/htdocs/pak-gas-app/public
-```
+~~~
 
-Example VirtualHost:
+Example:
 
-```apache
+~~~apache
 <VirtualHost *:80>
     ServerName pak-gas.local
     DocumentRoot "C:/xampp/htdocs/pak-gas-app/public"
@@ -166,112 +117,85 @@ Example VirtualHost:
         Options -Indexes
     </Directory>
 </VirtualHost>
-```
+~~~
 
-Add to the Windows hosts file:
+Windows hosts entry:
 
-```text
+~~~text
 127.0.0.1 pak-gas.local
-```
-
-Hosts file:
-
-```text
-C:\Windows\System32\drivers\etc\hosts
-```
-
-Restart Apache.
+~~~
 
 Open:
 
-```text
+~~~text
 http://pak-gas.local/
-```
+~~~
 
-Do not use C:\xampp\htdocs\pak-gas-app as Apache DocumentRoot.
+## 7. Application updates and migrations
 
-## 9. Local development without VirtualHost
+Future DB changes are added as numbered files:
 
-```bat
+~~~text
+database/migrations/001_add_example_column.sql
+database/migrations/002_create_example_index.sql
+~~~
+
+Do not modify a migration after it has been applied.
+
+When an unapplied migration file is deployed:
+
+1. The application detects it automatically.
+2. Normal requests are redirected to /install.
+3. /install runs the pending migrations in filename order.
+4. A checksum is stored in schema_migrations.
+5. The application redirects to Login after successful completion.
+
+If a migration fails, the application remains on the Installation page and shows the migration error instead of opening the application with an unknown database state.
+
+## 8. Local PHP server option
+
+~~~bat
 cd C:\xampp\htdocs\pak-gas-app
 php -S localhost:8080 -t public
-```
+~~~
 
 Set:
 
-```dotenv
+~~~dotenv
 APP_URL=http://localhost:8080
-```
+~~~
 
-Composer is not required.
+Then open http://localhost:8080/.
 
-## 10. First login and application verification
-
-Open the application and verify:
-
-1. Login page loads.
-2. Admin login works.
-3. First login requires password change.
-4. Dashboard opens.
-5. Parties, Cylinder Groups, Cylinders and Rates load.
-6. Opening Stock loads and can create/void stock.
-7. POS transaction type loads from settings.
-8. POS transaction type changes affect the screen.
-9. Sales History and Receipts load.
-10. Purchases and Payments load.
-11. Cheques, Expenses, Cash Counter and Reports load.
-12. Users/Roles and Audit Log are permission-protected.
-
-Run the local runtime checks:
-
-```bat
-php bin\test.php
-```
-
-Expected:
-
-```text
-All runtime checks passed.
-```
-
-## 11. Backup on Windows
-
-Create a backup folder first:
-
-```bat
-mkdir C:\backup
-```
+## 9. Backup / restore
 
 Backup:
 
-```bat
+~~~bat
+mkdir C:\backup
 C:\xampp\mysql\bin\mysqldump.exe -u root -p --single-transaction --routines --triggers pak_gas > C:\backup\pak_gas_backup.sql
-```
+~~~
 
 Restore:
 
-```bat
+~~~bat
 C:\xampp\mysql\bin\mysql.exe -u root -p pak_gas < C:\backup\pak_gas_backup.sql
-```
+~~~
 
-## 12. Updating the application
+## 10. Maintenance command
 
-Pull/copy the new PHP application files.
-Do not run a migration command because this project has no migration system.
-For a new database, import database/schema.sql.
-For an existing production database, take a full backup before replacing or rebuilding the schema and validate the target database separately.
+For troubleshooting/maintenance only:
 
-After application updates, run:
+~~~bat
+php bin\seed.php
+~~~
 
-```bat
-php bin\test.php
-```
+It applies pending migrations and refreshes the Administrator from .env.
 
-## 13. Important rules
+## 11. Security
 
-- Keep .env outside source control.
-- Deployment URLs must be changed only through .env.
-- Do not expose the repository root through Apache.
-- Do not add migration scripts.
-- database/schema.sql is the canonical database definition and contains static seed data.
-- bin/seed.php is only for the environment-based administrator credential setup.
+- Keep .env out of Git.
+- Expose only public/ through Apache.
+- Change the default administrator password immediately after first login.
+- Change deployment URLs only in .env.
+- Never edit an already-applied migration; add a new numbered migration.
