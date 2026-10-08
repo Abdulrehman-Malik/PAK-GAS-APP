@@ -6,6 +6,142 @@ use App\Core\DB;
 
 final class StockService
 {
+    public function move(
+        int $cylinderId,
+        string $movementType,
+        string $toLocation,
+        string $afterGas,
+        ?int $customerId,
+        string $rate,
+        string $documentType,
+        int $documentId,
+        int $userId,
+        ?string $notes = null
+    ): array {
+        $cylinder = $this->db->fetchOne(
+            'SELECT c.*, cg.capacity_kg
+             FROM cylinders c
+             INNER JOIN cylinder_groups cg ON cg.id = c.group_id
+             WHERE c.id = :id
+             FOR UPDATE',
+            ['id' => $cylinderId]
+        );
+        if (!$cylinder || !(int) $cylinder['active']) {
+            throw new \InvalidArgumentException('Cylinder not found or inactive.');
+        }
+
+        $before = (string) $cylinder['gas_kg'];
+        $capacity = (string) $cylinder['capacity_kg'];
+        if (bccomp($afterGas, '0.000', 3) < 0 || bccomp($afterGas, $capacity, 3) > 0) {
+            throw new \InvalidArgumentException('Cylinder gas is outside its capacity.');
+        }
+        if ($toLocation === 'CUSTOMER' && $customerId === null) {
+            throw new \InvalidArgumentException('A customer is required when issuing a cylinder.');
+        }
+        if ($toLocation !== 'CUSTOMER') {
+            $customerId = null;
+        }
+        if ($cylinder['location'] === 'SOLD') {
+            throw new \InvalidArgumentException('Sold cylinder cannot be moved again.');
+        }
+
+        $this->db->execute(
+            'UPDATE cylinders
+             SET gas_kg = :gas, location = :location, customer_id = :customer, updated_by = :user
+             WHERE id = :id',
+            [
+                'gas' => $afterGas,
+                'location' => $toLocation,
+                'customer' => $customerId,
+                'user' => $userId,
+                'id' => $cylinderId,
+            ]
+        );
+
+        $this->db->execute(
+            'INSERT INTO cylinder_movements
+             (cylinder_id, movement_type, before_gas_kg, after_gas_kg, from_location, to_location,
+              customer_id, rate, source_document_type, source_document_id, created_by)
+             VALUES (:cylinder, :movement, :before, :after, :from_location, :to_location,
+                     :customer, :rate, :document_type, :document_id, :user)',
+            [
+                'cylinder' => $cylinderId,
+                'movement' => $movementType,
+                'before' => $before,
+                'after' => $afterGas,
+                'from_location' => $cylinder['location'],
+                'to_location' => $toLocation,
+                'customer' => $customerId,
+                'rate' => $rate,
+                'document_type' => $documentType,
+                'document_id' => $documentId,
+                'user' => $userId,
+            ]
+        );
+
+        return [
+            'before_gas' => $before,
+            'after_gas' => $afterGas,
+            'from_location' => $cylinder['location'],
+            'to_location' => $toLocation,
+            'customer_id' => $customerId,
+        ];
+    }
+
+    public function createPurchasedCylinder(
+        int $groupId,
+        string $code,
+        string $gas,
+        string $condition,
+        int $userId,
+        int $purchaseId
+    ): int {
+        $group = $this->db->fetchOne(
+            'SELECT id, code, capacity_kg FROM cylinder_groups WHERE id = :id AND active = 1 FOR UPDATE',
+            ['id' => $groupId]
+        );
+        if (!$group) {
+            throw new \InvalidArgumentException('Cylinder group is invalid or inactive.');
+        }
+        if (bccomp($gas, '0.000', 3) < 0 || bccomp($gas, (string) $group['capacity_kg'], 3) > 0) {
+            throw new \InvalidArgumentException('Initial gas is outside cylinder capacity.');
+        }
+        if (!in_array($condition, ['GOOD', 'DAMAGED'], true)) {
+            throw new \InvalidArgumentException('Invalid cylinder condition.');
+        }
+
+        $this->db->execute(
+            'INSERT INTO cylinders
+             (code, group_id, gas_kg, location, customer_id, condition_code, source, active, created_by, updated_by)
+             VALUES (:code, :group_id, :gas, \'SHOP\', NULL, :condition, \'PURCHASE\', 1, :user, :user)',
+            [
+                'code' => $code,
+                'group_id' => $groupId,
+                'gas' => $gas,
+                'condition' => $condition,
+                'user' => $userId,
+            ]
+        );
+        $id = (int) $this->db->pdo()->lastInsertId();
+
+        $this->db->execute(
+            'INSERT INTO cylinder_movements
+             (cylinder_id, movement_type, before_gas_kg, after_gas_kg, from_location, to_location,
+              customer_id, rate, source_document_type, source_document_id, created_by)
+             VALUES (:cylinder, \'PURCHASE_NEW\', 0, :gas, \'SHOP\', \'SHOP\',
+                     NULL, :rate, \'PURCHASE\', :purchase, :user)',
+            [
+                'cylinder' => $id,
+                'gas' => $gas,
+                'rate' => '0.00',
+                'purchase' => $purchaseId,
+                'user' => $userId,
+            ]
+        );
+
+        return $id;
+    }
+
     public function __construct(private readonly DB $db, private readonly CodeGenerator $codes) {}
 
     public function voidOpeningBatch(int $batchId, int $userId, string $reason): void
