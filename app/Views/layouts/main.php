@@ -146,6 +146,9 @@ foreach ($groups as $group) {
     <meta name="csrf-token" content="<?= e($GLOBALS['csrf']->token()) ?>">
     <link rel="stylesheet" href="<?= e(asset('vendor/bootstrap/bootstrap.min.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>?v=<?= e((string) (filemtime(base_path('public/assets/css/app.css')) ?: 0)) ?>">
+    <script src="<?= e(asset('vendor/jquery/jquery.min.js')) ?>"></script>
+    <script src="<?= e(asset('vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script>
+    <script src="<?= e(asset('js/app.js')) ?>?v=<?= e((string) (filemtime(base_path('public/assets/js/app.js')) ?: 0)) ?>"></script>
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -263,8 +266,5 @@ foreach ($groups as $group) {
     </div>
 </div>
 
-<script src="<?= e(asset('vendor/jquery/jquery.min.js')) ?>"></script>
-<script src="<?= e(asset('vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script>
-<script src="<?= e(asset('js/app.js')) ?>?v=<?= e((string) (filemtime(base_path('public/assets/js/app.js')) ?: 0)) ?>"></script>
 </body>
 </html>
