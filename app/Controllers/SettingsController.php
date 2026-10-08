@@ -10,6 +10,7 @@ use App\Core\View;
 use App\Core\Request;
 use App\Services\AuditService;
 use App\Services\SettingsService;
+use App\Services\DocNumberService;
 
 final class SettingsController
 {
@@ -17,8 +18,28 @@ final class SettingsController
         private readonly SettingsService $settings,
         private readonly Auth $auth,
         private readonly Request $request,
-        private readonly AuditService $audit
+        private readonly AuditService $audit,
+        private readonly DocNumberService $docs
     ) {
+    }
+
+    public function updateDocNumbers():Response
+    {
+        $input=$this->request->input();
+        try{
+            $types=['SALE','RECEIPT','PURCHASE','PAYMENT','EXPENSE'];
+            foreach($types as $type){
+                $this->docs->updateDefinition(
+                    $type,
+                    (string)($input[$type.'_prefix']??''),
+                    (int)($input[$type.'_width']??6),
+                    (int)($input[$type.'_next']??1)
+                );
+            }
+            $user=$this->auth->user();
+            $this->audit->record((int)$user['id'],'UPDATE','doc_sequences',null,null,$input,$this->request->ip());
+            return Response::redirect(url('/settings'));
+        }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
 
     public function updateGroup(): Response
