@@ -39,7 +39,7 @@ final class PurchaseService
         }
 
         return $this->db->transaction(function () use (
-            $date, $supplierId, $invoice, $paid, $method, $counterId, $lines, $userId
+            $date, $supplierId, $invoice, $paid, $method, $counterId, $lines, $userId, $input
         ): array {
             $supplier = $this->db->fetchOne(
                 "SELECT * FROM parties
@@ -286,15 +286,23 @@ final class PurchaseService
                 $chequeId = null;
 
                 if ($method === 'CHEQUE') {
+                    $chequeNo = trim((string) ($input['cheque_no'] ?? ''));
+                    if ($chequeNo === '') {
+                        throw new \\InvalidArgumentException('Cheque number is required.');
+                    }
+                    $chequeDate = (string) ($input['cheque_date'] ?? $date);
+                    if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $chequeDate)) {
+                        throw new \\InvalidArgumentException('Cheque date is invalid.');
+                    }
                     $cheque = $this->db->execute(
                         'INSERT INTO cheques
                          (direction, party_id, cheque_no, bank, cheque_date, amount, status, payment_id, created_by)
                          VALUES (\'OUT\', :party, :no, :bank, :cheque_date, :amount, :status, NULL, :user)',
                         [
                             'party' => $supplierId,
-                            'no' => trim((string) ($input['cheque_no'] ?? '')),
+                            'no' => $chequeNo,
                             'bank' => trim((string) ($input['cheque_bank'] ?? '')) ?: null,
-                            'cheque_date' => (string) ($input['cheque_date'] ?? $date),
+                            'cheque_date' => $chequeDate,
                             'amount' => $paid,
                             'status' => $this->chequePostingMode() === 'ON_RECEIPT' ? 'CLEARED' : 'PENDING',
                             'user' => $userId,
