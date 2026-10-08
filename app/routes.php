@@ -29,7 +29,7 @@ $homeController = new HomeController($auth);
 $auditService = new AuditService($db);
 $partyController = new PartyController(new PartyRepository($db), $auth, $request, new Validator(), $session, $auditService);
 $groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService);
-$cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService);
+$cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 $settingsController = new SettingsController(
     new SettingsService(new SettingsRepository($db)),
