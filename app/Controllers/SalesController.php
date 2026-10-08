@@ -73,8 +73,6 @@ final class SalesController
             $params
         )['total'] ?? 0));
 
-        $params['limit'] = $limit;
-        $params['offset'] = $offset;
         $rows = $this->db->fetchAll(
             "SELECT s.id, s.doc_no, s.txn_date, p.code AS customer_code, p.name AS customer_name,
                     s.issue_total, s.cylinder_sale_total, s.return_total, s.net_amount,
@@ -87,7 +85,7 @@ final class SalesController
              LEFT JOIN users u ON u.id = s.created_by
              WHERE {$condition}
              ORDER BY s.id DESC
-             LIMIT :limit OFFSET :offset",
+             LIMIT {$limit} OFFSET {$offset}",
             $params
         );
 
