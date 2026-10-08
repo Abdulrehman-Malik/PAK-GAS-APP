@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          docker run -d --name pak-gas-schema-test -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
+          docker run -d --name pak-gas-schema-test -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
           trap 'docker rm -f pak-gas-schema-test >/dev/null 2>&1 || true' EXIT
           for i in {1..30}; do
             if docker exec pak-gas-schema-test mariadb-admin ping -h 127.0.0.1 -uroot -proot --silent >/dev/null 2>&1; then
@@ -61,5 +61,19 @@ jobs:
           export TEST_DB_NAME=pak_gas
           export TEST_DB_USER=root
           export TEST_DB_PASS=root
+          cat > .env <<'ENV'
+          APP_ENV=test
+          APP_URL=http://localhost
+          APP_NAME=Pak Gas POS
+          TIMEZONE=Asia/Karachi
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_NAME=pak_gas
+          DB_USER=root
+          DB_PASS=root
+          SEED_ADMIN_USERNAME=ci_admin
+          SEED_ADMIN_PASSWORD=CiInstallerPassword123!
+          ENV
+          trap 'rm -f .env database/migrations/999_ci_installer_smoke.sql' EXIT
           php bin/test-installer.php
           docker exec pak-gas-schema-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas; SHOW TABLES LIKE 'ci_installer_smoke'; SELECT migration FROM schema_migrations WHERE migration='999_ci_installer_smoke.sql';"
