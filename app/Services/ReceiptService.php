@@ -127,12 +127,6 @@ final class ReceiptService
                 'UPDATE receipts SET status = \'VOID\' WHERE id = :id',
                 ['id' => $receiptId]
             );
-            if ($cheque && $cheque['status'] === 'PENDING') {
-                $this->db->execute('UPDATE cheques SET status = \'BOUNCED\', bounced_reason = :reason WHERE id = :id', [
-                    'reason' => 'Receipt void: ' . $reason, 'id' => $cheque['id'],
-                ]);
-            }
-
             $this->audit->record($userId, 'VOID', 'receipts', $receiptId, ['status' => 'POSTED'], [
                 'status' => 'VOID', 'reason' => $reason,
             ], null);
