@@ -24,6 +24,11 @@ final class Response
         return new self($body, $status, 'application/json; charset=UTF-8');
     }
 
+    public static function binary(string $body, string $contentType): self
+    {
+        return new self($body, 200, $contentType);
+    }
+
     public static function redirect(string $url, int $status = 302): self
     {
         header('Location: ' . $url, true, $status);
