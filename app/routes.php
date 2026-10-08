@@ -73,7 +73,8 @@ $rateService = new RateService($db);
 $posService = new PosService($db, $docService, $ledgerService, $cashService, $rateService, $stockService);
 $posController = new PosController($posService, $rateService, $db, $auth, $request, new Validator());
 
-$counterController = new CounterController(new CounterService($db), $auth, $request);
+$counterService = new CounterService($db);
+$counterController = new CounterController($counterService, $auth, $request);
 
 $receiptService = new ReceiptService($db, $docService, $ledgerService, $cashService);
 $receiptController = new ReceiptController($receiptService, $auth, $request);
@@ -100,7 +101,8 @@ $settingsController = new SettingsController(
     $auth,
     $request,
     $auditService,
-    $docService
+    $docService,
+    $counterService
 );
 
 $router->get('/login', [$authController, 'showLogin']);
