@@ -107,6 +107,7 @@ $router->get('/', [$homeController, 'index'], true, 'dashboard.view');
 
 $router->get('/settings', [$settingsController, 'index'], true, 'settings.view');
 $router->post('/settings/pos', [$settingsController, 'updatePos'], true, 'settings.manage');
+$router->post('/settings/group', [$settingsController, 'updateGroup'], true, 'settings.manage');
 
 $router->get('/parties', [$partyController, 'index'], true, 'parties.view');
 $router->get('/parties/data', [$partyController, 'data'], true, 'parties.view');
