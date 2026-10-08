@@ -8,6 +8,56 @@ final class StockService
 {
     public function __construct(private readonly DB $db, private readonly CodeGenerator $codes) {}
 
+    public function voidOpeningBatch(int $batchId, int $userId, string $reason): void
+    {
+        $reason = trim($reason);
+        if ($reason === '') throw new \InvalidArgumentException('Void reason is required.');
+        $this->db->transaction(function () use ($batchId, $userId, $reason): void {
+            $batch = $this->db->fetchOne('SELECT * FROM stock_batches WHERE id=:id FOR UPDATE', ['id'=>$batchId]);
+            if (!$batch) throw new \InvalidArgumentException('Opening stock batch not found.');
+            if ($batch['status'] !== 'POSTED') throw new \InvalidArgumentException('Only a posted opening-stock batch can be voided.');
+
+            $movements = $this->db->fetchAll(
+                "SELECT m.*,c.code FROM cylinder_movements m
+                 INNER JOIN cylinders c ON c.id=m.cylinder_id
+                 WHERE m.stock_batch_id=:batch AND m.movement_type='OPENING'
+                 FOR UPDATE",
+                ['batch'=>$batchId]
+            );
+            foreach ($movements as $m) {
+                $later = $this->db->fetchOne(
+                    "SELECT id,movement_type FROM cylinder_movements
+                     WHERE cylinder_id=:cid AND id>:opening_id
+                     ORDER BY id LIMIT 1",
+                    ['cid'=>$m['cylinder_id'],'opening_id'=>$m['id']]
+                );
+                if ($later) {
+                    throw new \InvalidArgumentException('Cannot void batch: cylinder '.$m['code'].' has a later '.$later['movement_type'].' movement.');
+                }
+            }
+
+            foreach ($movements as $m) {
+                $this->db->execute(
+                    "INSERT INTO cylinder_movements
+                     (cylinder_id,movement_type,before_gas_kg,after_gas_kg,from_location,to_location,customer_id,source_document_type,source_document_id,stock_batch_id,created_by)
+                     VALUES (:cid,'OPENING_VOID',:before,0,:from_loc,'SHOP',NULL,'STOCK_BATCH',:batch,:batch,:uid)",
+                    [
+                        'cid'=>$m['cylinder_id'], 'before'=>$m['after_gas_kg'],
+                        'from_loc'=>$m['to_location'], 'batch'=>$batchId, 'uid'=>$userId
+                    ]
+                );
+                $this->db->execute(
+                    "UPDATE cylinders SET gas_kg=0,location='SHOP',customer_id=NULL,active=0,updated_by=:uid WHERE id=:id",
+                    ['uid'=>$userId,'id'=>$m['cylinder_id']]
+                );
+            }
+            $this->db->execute(
+                "UPDATE stock_batches SET status='VOID',voided_at=NOW(),voided_by=:uid,void_reason=:reason WHERE id=:id",
+                ['uid'=>$userId,'reason'=>$reason,'id'=>$batchId]
+            );
+        });
+    }
+
     public function createOpeningBatch(array $rows,int $userId,string $source='MANUAL',?string $notes=null): int
     {
         if ($rows === []) throw new \InvalidArgumentException('At least one opening-stock row is required.');
