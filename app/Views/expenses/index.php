@@ -1,0 +1,13 @@
+<div class="d-flex justify-content-between align-items-center mb-3"><div><h1 class="h3">Expenses</h1><p class="text-secondary mb-0">Utility and shop expenses with cash tracking.</p></div></div>
+<div class="row g-3"><div class="col-lg-4"><div class="card shadow-sm"><div class="card-header"><strong>New Expense</strong></div><div class="card-body"><form id="f">
+<label class="form-label">Date</label><input name="expense_date" type="date" class="form-control mb-2" value="<?=e(date('Y-m-d'))?>">
+<label class="form-label">Category</label><select name="category_id" class="form-select mb-2"><?php foreach($categories as $c):?><option value="<?=$c['id']?>"><?=e($c['name'])?></option><?php endforeach;?></select>
+<label class="form-label">Amount</label><input name="amount" class="form-control mb-2" value="0.00">
+<label class="form-label">Method</label><select name="method" class="form-select mb-2"><option>CASH</option><option>ONLINE</option><option>CHEQUE</option></select>
+<label class="form-label">Counter</label><input name="counter_id" class="form-control mb-2" value="<?=e((string)($user['default_counter_id']??''))?>">
+<input name="reference_no" class="form-control mb-2" placeholder="Reference no"><input name="payee" class="form-control mb-2" placeholder="Payee"><textarea name="notes" class="form-control" placeholder="Notes"></textarea>
+<button class="btn btn-primary mt-3">Post Expense</button></form></div></div></div>
+<div class="col-lg-8"><div class="card shadow-sm"><div class="card-header"><strong>Expense History</strong></div><div class="card-body"><div class="table-responsive"><table class="table table-sm" id="t"><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Method</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div></div></div></div></div>
+<script>
+$(function(){const b=<?=json_encode(url('/'),JSON_THROW_ON_ERROR)?>;function load(){$.getJSON(b+'expenses/data').done(r=>{let x=$('#t tbody').empty();(r.data.rows||[]).forEach(v=>x.append('<tr><td>'+v.expense_date+'</td><td>'+v.category_name+'</td><td>'+Number(v.amount).toFixed(2)+'</td><td>'+v.method+'</td><td>'+v.status+'</td><td>'+(v.status==='POSTED'?'<button class="btn btn-sm btn-outline-danger void" data-id="'+v.id+'">Void</button>':'')+'</td></tr>'))})}$('#f').submit(function(e){e.preventDefault();$.post(b+'expenses',$(this).serialize()).done(r=>{alert(r.message);if(r.ok){this.reset();load()}}).fail(x=>alert(x.responseJSON?.message||'Expense failed'))});$(document).on('click','.void',function(){let reason=prompt('Void reason:');if(!reason)return;$.post(b+'expenses/'+$(this).data('id')+'/void',{reason}).done(r=>{alert(r.message);load()}).fail(x=>alert(x.responseJSON?.message||'Void failed'))});load()});
+</script>

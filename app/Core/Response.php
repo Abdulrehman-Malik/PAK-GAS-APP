@@ -24,8 +24,12 @@ final class Response
         return new self($body, $status, 'application/json; charset=UTF-8');
     }
 
-    public static function binary(string $body, string $contentType): self
+    public static function binary(string $body, string $contentType, ?string $downloadName = null): self
     {
+        if ($downloadName !== null) {
+            header('Content-Disposition: attachment; filename="' . addslashes($downloadName) . '"');
+            header('X-Content-Type-Options: nosniff');
+        }
         return new self($body, 200, $contentType);
     }
 

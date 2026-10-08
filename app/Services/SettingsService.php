@@ -19,7 +19,7 @@ final class SettingsService
 
     public function updatePosSettings(array $transactionTypes, string $defaultType): void
     {
-        $allowed = ['GAS_SALE', 'EMPTY_CYLINDER_SALE'];
+        $allowed = ['GAS_SALE', 'EMPTY_CYLINDER_SALE', 'CYLINDER_RETURN'];
         $types = array_values(array_unique(array_filter(
             array_map(static fn ($value): string => trim((string) $value), $transactionTypes),
             static fn (string $value): bool => $value !== ''

@@ -122,6 +122,20 @@ final class PosController
         return Response::json(['ok' => true, 'data' => $rows]);
     }
 
+    public function issued(int $customerId): Response
+    {
+        if ($customerId < 1) {
+            return Response::json(['ok' => true, 'data' => []]);
+        }
+
+        try {
+            $this->auth->require('sales.create');
+            return Response::json(['ok' => true, 'data' => $this->pos->issuedToCustomer($customerId)]);
+        } catch (\Throwable $e) {
+            return Response::json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
     public function customers(): Response
     {
         $q = trim((string) ($this->request->query()['q'] ?? ''));

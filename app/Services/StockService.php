@@ -8,6 +8,103 @@ final class StockService
 {
     public function __construct(private readonly DB $db, private readonly CodeGenerator $codes) {}
 
+    /**
+     * Move a locked cylinder through the only stock mutation path.
+     */
+    public function moveCylinder(
+        int $cylinderId,
+        string $toLocation,
+        ?int $customerId,
+        string $afterGas,
+        string $movementType,
+        ?string $rate,
+        string $sourceDocumentType,
+        int $sourceDocumentId,
+        int $userId
+    ): array {
+        if (!in_array($toLocation, ['SHOP', 'CUSTOMER', 'SOLD'], true)) {
+            throw new \InvalidArgumentException('Invalid cylinder destination.');
+        }
+
+        if ($toLocation === 'CUSTOMER' && $customerId === null) {
+            throw new \InvalidArgumentException('Customer is required for an issued cylinder.');
+        }
+
+        if ($toLocation !== 'CUSTOMER' && $customerId !== null) {
+            throw new \InvalidArgumentException('Only customer cylinders can have a customer.');
+        }
+
+        $cylinder = $this->db->fetchOne(
+            'SELECT c.*, cg.capacity_kg
+             FROM cylinders c
+             INNER JOIN cylinder_groups cg ON cg.id = c.group_id
+             WHERE c.id = :id
+             FOR UPDATE',
+            ['id' => $cylinderId]
+        );
+
+        if (!$cylinder) {
+            throw new \InvalidArgumentException('Cylinder not found.');
+        }
+
+        $beforeGas = (string) $cylinder['gas_kg'];
+        $capacity = (string) $cylinder['capacity_kg'];
+
+        if (bccomp($afterGas, '0.000', 3) < 0 || bccomp($afterGas, $capacity, 3) > 0) {
+            throw new \InvalidArgumentException('Gas quantity is outside the cylinder capacity.');
+        }
+
+        if ($cylinder['location'] === 'SOLD' && $toLocation !== 'SOLD') {
+            // Only an explicit sale void may reverse a sold cylinder.
+            if ($movementType !== 'SALE_VOID') {
+                throw new \InvalidArgumentException('A sold cylinder cannot move again.');
+            }
+        }
+
+        $this->db->execute(
+            'UPDATE cylinders
+             SET gas_kg = :gas, location = :location, customer_id = :customer, updated_by = :user
+             WHERE id = :id',
+            [
+                'gas' => $afterGas,
+                'location' => $toLocation,
+                'customer' => $customerId,
+                'user' => $userId,
+                'id' => $cylinderId,
+            ]
+        );
+
+        $this->db->execute(
+            'INSERT INTO cylinder_movements
+             (cylinder_id, movement_type, before_gas_kg, after_gas_kg, from_location, to_location,
+              customer_id, rate, source_document_type, source_document_id, created_by)
+             VALUES
+             (:cylinder, :movement, :before, :after, :from_location, :to_location,
+              :customer, :rate, :source_type, :source_id, :user)',
+            [
+                'cylinder' => $cylinderId,
+                'movement' => $movementType,
+                'before' => $beforeGas,
+                'after' => $afterGas,
+                'from_location' => $cylinder['location'],
+                'to_location' => $toLocation,
+                'customer' => $customerId,
+                'rate' => $rate,
+                'source_type' => $sourceDocumentType,
+                'source_id' => $sourceDocumentId,
+                'user' => $userId,
+            ]
+        );
+
+        return [
+            'before_gas' => $beforeGas,
+            'after_gas' => $afterGas,
+            'from_location' => $cylinder['location'],
+            'to_location' => $toLocation,
+            'capacity_kg' => $capacity,
+        ];
+    }
+
     public function voidOpeningBatch(int $batchId, int $userId, string $reason): void
     {
         $reason = trim($reason);

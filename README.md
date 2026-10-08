@@ -245,6 +245,22 @@ Do not delete the `storage/` directory during an application update.
 
 Never manually modify production tables when a migration is required. Add and deploy a numbered migration.
 
+## 12. Current functional modules
+
+The current application includes:
+
+- Masters: Parties, Cylinder Groups, Cylinders, Rates
+- Opening Stock: manual entry, batch void, native XLSX template/import with validation
+- POS: gas sale, empty-cylinder sale, filled-cylinder sale, customer returns/exchange, cash/online/cheque payments, credit/advance handling
+- Sales History: filters, detail, CSV export and conflict-aware void
+- Receipts: manual/POS receipts, cheque posting, history, void and 80 mm thermal print
+- Purchases: gas refill and new cylinders, AUTO/MANUAL codes, paid-now posting and void conflict rules
+- Supplier Payments, Cheque Register, Expenses and Cash Counter
+- Reports: stock, sold cylinders, sales, receipts, payments, balances, held cylinders, cash and expenses
+- Users/Roles, permission matrix and Audit Log
+
+The application does not require Composer or a vendor directory at runtime. PHP BCMath and Zip are required for precise decimal processing and native XLSX support.
+
 ## 12. Architecture
 
 - Controllers orchestrate HTTP requests.

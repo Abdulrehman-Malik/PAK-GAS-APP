@@ -42,3 +42,33 @@ function csrf_input(): string
 
     return '<input type="hidden" name="_csrf" value="' . e($csrf->token()) . '">';
 }
+
+function money(string|int $value): string
+{
+    $value = trim((string) $value);
+    if ($value === '' || !preg_match('/^-?\d+(?:\.\d+)?$/', $value)) {
+        return '0.00';
+    }
+    $negative = str_starts_with($value, '-');
+    $value = ltrim($value, '+-');
+    [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
+    $fraction = str_pad(substr($fraction, 0, 2), 2, '0');
+    $result = ltrim($whole, '0');
+    $result = $result === '' ? '0' : $result;
+    return ($negative && $result !== '0' ? '-' : '') . $result . '.' . $fraction;
+}
+
+function decimal3(string|int $value): string
+{
+    $value = trim((string) $value);
+    if ($value === '' || !preg_match('/^-?\d+(?:\.\d+)?$/', $value)) {
+        return '0.000';
+    }
+    $negative = str_starts_with($value, '-');
+    $value = ltrim($value, '+-');
+    [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
+    $fraction = str_pad(substr($fraction, 0, 3), 3, '0');
+    $result = ltrim($whole, '0');
+    $result = $result === '' ? '0' : $result;
+    return ($negative && $result !== '0' ? '-' : '') . $result . '.' . $fraction;
+}

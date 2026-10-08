@@ -16,6 +16,11 @@ final class Request
         return $_POST;
     }
 
+    public function files(): array
+    {
+        return $_FILES;
+    }
+
     public function inputValue(string $key, mixed $default = null): mixed
     {
         return $_POST[$key] ?? $default;
