@@ -50,6 +50,23 @@ final class UserService
         return $id;
     }
 
+    public function deactivate(int $id,int $actorId,string $ip):void
+    {
+        if($id===$actorId)throw new \InvalidArgumentException('You cannot deactivate your own account.');
+        $user=$this->db->fetchOne('SELECT * FROM users WHERE id=:id FOR UPDATE',['id'=>$id]);
+        if(!$user)throw new \InvalidArgumentException('User not found.');
+        $this->db->execute('UPDATE users SET active=0,updated_by=:user WHERE id=:id',['user'=>$actorId,'id'=>$id]);
+        $this->audit->record($actorId,'DEACTIVATE','users',$id,$user,['active'=>0],$ip);
+    }
+
+    public function activate(int $id,int $actorId,string $ip):void
+    {
+        $user=$this->db->fetchOne('SELECT * FROM users WHERE id=:id FOR UPDATE',['id'=>$id]);
+        if(!$user)throw new \InvalidArgumentException('User not found.');
+        $this->db->execute('UPDATE users SET active=1,updated_by=:user WHERE id=:id',['user'=>$actorId,'id'=>$id]);
+        $this->audit->record($actorId,'ACTIVATE','users',$id,$user,['active'=>1],$ip);
+    }
+
     public function setRolePermissions(int $roleId,array $permissionIds,int $actorId,string $ip):void
     {
         $this->db->transaction(function()use($roleId,$permissionIds,$actorId,$ip):void{
