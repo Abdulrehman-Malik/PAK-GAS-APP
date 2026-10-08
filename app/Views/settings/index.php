@@ -59,10 +59,10 @@
                 <button
                     class="nav-link <?= $index === 0 ? 'active' : '' ?>"
                     id="<?= e($tabId) ?>-tab"
-                    data-bs-toggle="tab"
-                    data-bs-target="#<?= e($tabId) ?>"
+                    data-lpg-tab-target="#<?= e($tabId) ?>"
                     type="button"
                     role="tab"
+                    onclick="return window.Lpg && window.Lpg.activateTab ? window.Lpg.activateTab(this) : false;"
                     aria-controls="<?= e($tabId) ?>"
                     aria-selected="<?= $index === 0 ? 'true' : 'false' ?>"
                 >
@@ -80,6 +80,7 @@
                 class="tab-pane fade <?= $index === 0 ? 'show active' : '' ?>"
                 id="<?= e($tabId) ?>"
                 role="tabpanel"
+                data-lpg-tab-pane
                 aria-labelledby="<?= e($tabId) ?>-tab"
             >
                 <div class="card shadow-sm">
