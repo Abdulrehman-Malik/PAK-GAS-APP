@@ -29,7 +29,6 @@ Rules:
 lpg-pos/
 ├── AGENT.md
 ├── REQUIREMENTS.md
-├── composer.json
 ├── .env.example              # DB creds, APP_ENV, APP_URL, TIMEZONE (never commit .env)
 ├── bin/
 │   ├── migrate.php           # runs database/migrations/*.sql in order, records in `migrations` table
@@ -152,13 +151,14 @@ Invariants (each has a test):
 2. **Do not expand scope.** If something is missing or ambiguous, choose the simplest sensible default consistent with `REQUIREMENTS.md`, record it in the **Decisions log**, and continue. For anything under "Assumptions & open questions" (REQUIREMENTS §11) implement the stated default and keep it isolated/switchable.
 3. Never bypass the services in section 5 (e.g. no direct `UPDATE cylinders SET gas_kg…` from a controller).
 4. After each task: tick it in the **Progress** list, add a dated line to the **Progress log**, and note anything the next session needs to know. This file is how work resumes across sessions — keep it accurate.
+4a. **Mandatory QA runtime rule:** whenever a fix or feature changes a screen, endpoint, or shared component, run the QA/runtime workflow for every impacted screen automatically. Do not wait for the user to request it. Fix every issue found and repeat the checks until the impacted flow is clean.
 5. Definition of Done for a task: works end-to-end in the browser (desktop + mobile width), server-side validation and permission checks in place, audit log written, relevant tests pass, no PHP warnings, requirements/acceptance rows covered.
 6. Don't commit secrets, `vendor/`, `.env`, uploaded files, or backups.
 
 ## 11. Phased work plan
 
 ### Phase 0 — Foundation
-- [x] Repo skeleton, Composer, autoload, `.env` loader, front controller, router
+- [x] Repo skeleton, Composer-free autoload, `.env` loader, front controller, router
 - [x] `DB` (PDO) wrapper with transactions; `bin/migrate.php`; `001_core.sql` (users, roles, permissions, settings, audit_log, sequences)
 - [x] Auth (login/logout, session hardening, throttling, CSRF), role/permission middleware
 - [x] Main layout (sidebar, topbar, flash, modal/toast helpers), shared JS (`$.ajaxSetup` CSRF, DataTables defaults, number helpers)
