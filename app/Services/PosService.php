@@ -5,19 +5,25 @@ use App\Core\DB;
 final class PosService {
  public function __construct(private readonly DB $db,private readonly DocNumberService $docs,private readonly LedgerService $ledger,private readonly CashService $cash){}
  public function post(array $input,int $userId): array {
-  $date=(string)$input['txn_date'];$customerId=(int)$input['customer_id'];$counterId=(int)($input['counter_id']??0);$method=(string)($input['method']??'CASH');$received=(string)($input['received_amount']??'0.00');$lines=$input['lines']??[];
+  $date=(string)$input['txn_date'];$customerId=(int)$input['customer_id'];$counterId=(int)($input['counter_id']??0);$method=(string)($input['method']??'CASH');$received=(string)($input['received_amount']??'0.00');$lines=$input['lines']??[];$txnType=(string)($input['transaction_type']??'GAS_SALE');
+  if(!in_array($txnType,['GAS_SALE','EMPTY_CYLINDER_SALE'],true)) throw new \InvalidArgumentException('Transaction type is not supported.');
+  if(bccomp($received,'0.00',2)<0) throw new \InvalidArgumentException('Received amount cannot be negative.');
   if($customerId<1||$lines===[]) throw new \InvalidArgumentException('Customer and at least one cylinder are required.');
-  return $this->db->transaction(function()use($date,$customerId,$counterId,$method,$received,$lines,$userId):array{
+  return $this->db->transaction(function()use($date,$customerId,$counterId,$method,$received,$lines,$userId,$txnType):array{
    $party=$this->db->fetchOne('SELECT * FROM parties WHERE id=:id AND party_type=\'CUSTOMER\' AND active=1 FOR UPDATE',['id'=>$customerId]);
    if(!$party) throw new \InvalidArgumentException('Customer is invalid or inactive.');
    $issue=0;$sold=0;$returned=0;$saleLines=[];$movement=[];
    foreach($lines as $line){
+    if($txnType==='EMPTY_CYLINDER_SALE'){$line['type']='SELL_EMPTY';$line['gas_kg']='0.000';}
+
     $cid=(int)($line['cylinder_id']??0);$type=(string)($line['type']??'ISSUE');$rate=(string)($line['rate']??'0');$gas=(string)($line['gas_kg']??'0');$cprice=(string)($line['cylinder_price']??'0');
     $c=$this->db->fetchOne('SELECT c.*,cg.capacity_kg FROM cylinders c JOIN cylinder_groups cg ON cg.id=c.group_id WHERE c.id=:id AND c.active=1 FOR UPDATE',['id'=>$cid]);
     if(!$c||$c['condition_code']!=='GOOD') throw new \InvalidArgumentException('Cylinder is unavailable.');
     $before=(string)$c['gas_kg'];$cap=(string)$c['capacity_kg'];
     if(in_array($type,['ISSUE','SELL_FILLED'],true)&&bccomp($gas,'0',3)<=0) throw new \InvalidArgumentException('Gas quantity must be greater than zero.');
     if(bccomp($gas,'0',3)<0||bccomp($gas,$cap,3)>0) throw new \InvalidArgumentException('Gas quantity exceeds cylinder capacity.');
+    if(in_array($type,['ISSUE','SELL_FILLED'],true)&&bccomp($rate,'0.00',2)<=0) throw new \InvalidArgumentException('Gas rate must be greater than zero.');
+    if(in_array($type,['SELL_FILLED','SELL_EMPTY'],true)&&bccomp($cprice,'0.00',2)<=0) throw new \InvalidArgumentException('Cylinder price must be greater than zero.');
     if($type==='ISSUE'){if($c['location']!=='SHOP')throw new \InvalidArgumentException('Cylinder '.$c['code'].' is no longer available.');$amount=bcmul($gas,$rate,2);$issue=bcadd($issue,$amount,2);$to='CUSTOMER';$after=bcsub($before,$gas,3);}
     elseif($type==='SELL_FILLED'){if($c['location']!=='SHOP')throw new \InvalidArgumentException('Cylinder '.$c['code'].' is no longer available.');$amount=bcadd(bcmul($gas,$rate,2),$cprice,2);$sold=bcadd($sold,$amount,2);$to='SOLD';$after='0.000';}
     elseif($type==='SELL_EMPTY'){if($c['location']!=='SHOP'||bccomp($before,'0',3)!==0)throw new \InvalidArgumentException('Only an empty shop cylinder can be sold as Empty.');$amount=$cprice;$sold=bcadd($sold,$amount,2);$to='SOLD';$after='0.000';$gas='0.000';}
