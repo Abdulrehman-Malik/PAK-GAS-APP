@@ -57,22 +57,36 @@ final class CashService
             ['type' => $docType, 'doc' => $docId]
         );
 
-        if (!$entry) {
+        if (!$entry || bccomp((string) $entry['amount'], '0.00', 2) <= 0) {
             return 0;
         }
 
-        if (bccomp((string) $entry['amount'], '0.00', 2) <= 0) {
-            return 0;
-        }
-
-        return $this->post(
-            (int) $entry['counter_id'],
-            $date,
-            $entry['direction'] === 'IN' ? 'OUT' : 'IN',
-            (string) $entry['amount'],
-            'REVERSAL',
-            $docId,
-            $userId
+        $existing = $this->db->fetchOne(
+            "SELECT id FROM cash_entries
+             WHERE doc_type='REVERSAL' AND doc_id=:doc
+             ORDER BY id DESC LIMIT 1",
+            ['doc' => $docId]
         );
+        if ($existing) {
+            return (int) $existing['id'];
+        }
+
+        $this->db->execute(
+            'INSERT INTO cash_entries
+             (counter_id, session_id, entry_date, direction, amount, doc_type, doc_id, reason, created_by)
+             VALUES (:counter, :session, :date, :direction, :amount, \'REVERSAL\', :doc, :reason, :user)',
+            [
+                'counter' => $entry['counter_id'],
+                'session' => $entry['session_id'],
+                'date' => $date,
+                'direction' => $entry['direction'] === 'IN' ? 'OUT' : 'IN',
+                'amount' => $entry['amount'],
+                'doc' => $docId,
+                'reason' => 'Reversal of ' . $docType . ' #' . $docId,
+                'user' => $userId,
+            ]
+        );
+
+        return $this->db->lastInsertId();
     }
 }
