@@ -19,6 +19,7 @@ use App\Controllers\ChequeController;
 use App\Controllers\ExpenseController;
 use App\Controllers\ReportController;
 use App\Controllers\UserController;
+use App\Controllers\ImportController;
 use App\Services\CounterService;
 use App\Services\LedgerService;
 use App\Services\DocNumberService;
@@ -38,6 +39,8 @@ use App\Services\UserService;
 use App\Services\PasswordService;
 use App\Services\SettingsService;
 use App\Services\MasterProtectionService;
+use App\Services\ImportService;
+use App\Services\XlsxService;
 use App\Repositories\PartyRepository;
 use App\Repositories\CylinderGroupRepository;
 use App\Repositories\CylinderRepository;
@@ -88,6 +91,7 @@ $expenseService = new ExpenseService($db, $cashService, $docService);
 $expenseController = new ExpenseController($expenseService, $auth, $request);
 
 $reportController = new ReportController(new ReportService($db), $auth, $request);
+$importController = new ImportController(new ImportService($db, new XlsxService(), $stockService, $auditService), $auth, $request);
 
 $userController = new UserController(new UserService($db, $auditService), $auth, $request);
 
@@ -114,6 +118,9 @@ $router->get('/parties/data', [$partyController, 'data'], true, 'parties.view');
 $router->post('/parties', [$partyController, 'store'], true, 'parties.create');
 $router->post('/parties/delete', [$partyController, 'delete'], true, 'parties.create');
 $router->post('/parties/deactivate', [$partyController, 'deactivate'], true, 'parties.create');
+$router->get('/parties/import-template', [$importController, 'template'], true, 'parties.create');
+$router->post('/parties/import-preview', [$importController, 'preview'], true, 'parties.create');
+$router->post('/parties/import-commit', [$importController, 'commit'], true, 'parties.create');
 
 $router->get('/cylinder-groups', [$groupController, 'index'], true, 'cylinder_groups.view');
 $router->get('/cylinder-groups/data', [$groupController, 'data'], true, 'cylinder_groups.view');
@@ -136,6 +143,9 @@ $router->get('/opening-stock', [$openingStockController, 'index'], true, 'openin
 $router->get('/opening-stock/data', [$openingStockController, 'data'], true, 'opening_stock.view');
 $router->post('/opening-stock', [$openingStockController, 'store'], true, 'opening_stock.create');
 $router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'opening_stock.void');
+$router->get('/opening-stock/import-template', [$importController, 'template'], true, 'opening_stock.create');
+$router->post('/opening-stock/import-preview', [$importController, 'preview'], true, 'opening_stock.create');
+$router->post('/opening-stock/import-commit', [$importController, 'commit'], true, 'opening_stock.create');
 
 $router->get('/pos', [$posController, 'index'], true, 'sales.create');
 $router->get('/pos/config', [$posController, 'config'], true, 'sales.create');
