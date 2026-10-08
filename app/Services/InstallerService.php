@@ -342,7 +342,7 @@ final class InstallerService
                 full_name=VALUES(full_name),
                 password_hash=VALUES(password_hash),
                 role_id=VALUES(role_id),
-                default_counter_id=VALUES(counter_id),
+                default_counter_id=VALUES(default_counter_id),
                 force_password_change=1,
                 active=1'
         );
