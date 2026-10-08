@@ -12,6 +12,16 @@ final class SettingsRepository
     {
     }
 
+    public function set(string $group, string $key, string $value): void
+    {
+        $this->db->execute(
+            'INSERT INTO settings(setting_group, setting_key, setting_value)
+             VALUES(:group_name, :key_name, :value)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+            ['group_name' => $group, 'key_name' => $key, 'value' => $value]
+        );
+    }
+
     public function all(): array
     {
         $rows = $this->db->fetchAll(

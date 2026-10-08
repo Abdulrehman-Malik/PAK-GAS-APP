@@ -21,11 +21,43 @@ $user = $user ?? null;
             <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" data-bs-dismiss="offcanvas" aria-label="Close">×</button>
         </div>
         <nav class="nav flex-column px-2 pb-3">
-            <a class="nav-link" href="<?= e(url('/')) ?>">Dashboard</a>
+            <?php if ($GLOBALS['auth']->can('dashboard.view')): ?>
+                <a class="nav-link" href="<?= e(url('/')) ?>">Dashboard</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('sales.view') || $GLOBALS['auth']->can('sales.create')): ?>
+                <a class="nav-link" href="<?= e(url('/pos')) ?>">POS</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('counter.view')): ?>
+                <a class="nav-link" href="<?= e(url('/counter')) ?>">Cash Counter</a>
+            <?php endif; ?>
+
             <?php if ($GLOBALS['auth']->can('settings.view')): ?>
                 <a class="nav-link" href="<?= e(url('/settings')) ?>">Settings</a>
             <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('parties.view')): ?>
+                <a class="nav-link" href="<?= e(url('/parties')) ?>">Parties</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('cylinder_groups.view')): ?>
+                <a class="nav-link" href="<?= e(url('/cylinder-groups')) ?>">Cylinder Groups</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('cylinders.view')): ?>
+                <a class="nav-link" href="<?= e(url('/cylinders')) ?>">Cylinders</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('rates.view')): ?>
+                <a class="nav-link" href="<?= e(url('/rates')) ?>">Rates</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('opening_stock.view')): ?>
+                <a class="nav-link" href="<?= e(url('/opening-stock')) ?>">Opening Stock</a>
+            <?php endif; ?>
         </nav>
+
         <div class="sidebar-footer">
             <div class="small text-secondary mb-2"><?= e($user['full_name'] ?? $user['username'] ?? '') ?></div>
             <form method="post" action="<?= e(url('/logout')) ?>">

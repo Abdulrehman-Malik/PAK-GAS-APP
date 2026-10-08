@@ -16,7 +16,7 @@ POS + inventory + ledger system for an LPG gas shop. Cylinders are issued to cus
 | Database | **MySQL 8 / MariaDB 10.6+**, InnoDB, `utf8mb4` |
 | Frontend | HTML5, CSS3, **Bootstrap 5.3**, **jQuery 3.7** (AJAX) |
 | UI plugins (allowed) | DataTables (server-side), Select2, SweetAlert2 or Bootstrap modals/toasts, Bootstrap Icons |
-| PHP libraries (allowed, via Composer) | `phpoffice/phpspreadsheet` (Excel import/export), `phpunit/phpunit` (dev). Ask before adding anything else. |
+| PHP libraries | None required at runtime. Keep the application Composer-free; use native PHP and the repository autoloader. Ask before adding third-party runtime libraries. |
 
 Rules:
 - **No PHP framework** (no Laravel/CodeIgniter/Symfony) and no JS framework (no React/Vue). Plain PHP + jQuery.
@@ -29,7 +29,6 @@ Rules:
 lpg-pos/
 ├── AGENT.md
 ├── REQUIREMENTS.md
-├── composer.json
 ├── .env.example              # DB creds, APP_ENV, APP_URL, TIMEZONE (never commit .env)
 ├── bin/
 │   ├── migrate.php           # runs database/migrations/*.sql in order, records in `migrations` table
@@ -57,10 +56,10 @@ lpg-pos/
 │   └── routes.php            # route table
 ├── storage/
 │   ├── logs/  uploads/  imports/  backups/    # not web accessible
-└── tests/                    # PHPUnit: Unit/ (services), Feature/ (DB-backed)
+└── tests/                    # lightweight runtime/unit checks
 ```
 
-Autoloading: PSR-4 via Composer (`App\` → `app/`).
+Autoloading: Composer-free PSR-4-compatible loader in `bootstrap.php` (`App\` → `app/`).
 
 ## 4. Coding conventions
 
@@ -141,7 +140,7 @@ Invariants (each has a test):
 
 ## 9. Testing & quality
 
-- PHPUnit unit tests for: `CylinderStatus`, `CodeGenerator` (both modes, concurrency-safe increments), `RateService`, `LedgerService` balances, `PosService` (issue, return, exchange, rate edit, credit-limit, void conflicts), `CashService` expected balance.
+- Runtime/unit checks cover core invariants. Keep business-flow regression checks runnable without Composer.
 - Feature/DB tests for the acceptance scenarios **AT-1 … AT-20** in `REQUIREMENTS.md`. Name tests after the scenario ID.
 - `php -l` on all files; no PHP notices/warnings in logs during manual testing.
 - Manual QA script per phase (short checklist in the Progress Log).
@@ -152,13 +151,14 @@ Invariants (each has a test):
 2. **Do not expand scope.** If something is missing or ambiguous, choose the simplest sensible default consistent with `REQUIREMENTS.md`, record it in the **Decisions log**, and continue. For anything under "Assumptions & open questions" (REQUIREMENTS §11) implement the stated default and keep it isolated/switchable.
 3. Never bypass the services in section 5 (e.g. no direct `UPDATE cylinders SET gas_kg…` from a controller).
 4. After each task: tick it in the **Progress** list, add a dated line to the **Progress log**, and note anything the next session needs to know. This file is how work resumes across sessions — keep it accurate.
+4a. **Mandatory QA runtime rule:** whenever a fix or feature changes a screen, endpoint, or shared component, run the QA/runtime workflow for every impacted screen automatically. Do not wait for the user to request it. Fix every issue found and repeat the checks until the impacted flow is clean.
 5. Definition of Done for a task: works end-to-end in the browser (desktop + mobile width), server-side validation and permission checks in place, audit log written, relevant tests pass, no PHP warnings, requirements/acceptance rows covered.
 6. Don't commit secrets, `vendor/`, `.env`, uploaded files, or backups.
 
 ## 11. Phased work plan
 
 ### Phase 0 — Foundation
-- [x] Repo skeleton, Composer, autoload, `.env` loader, front controller, router
+- [x] Repo skeleton, Composer-free autoload, `.env` loader, front controller, router
 - [x] `DB` (PDO) wrapper with transactions; `bin/migrate.php`; `001_core.sql` (users, roles, permissions, settings, audit_log, sequences)
 - [x] Auth (login/logout, session hardening, throttling, CSRF), role/permission middleware
 - [x] Main layout (sidebar, topbar, flash, modal/toast helpers), shared JS (`$.ajaxSetup` CSRF, DataTables defaults, number helpers)
@@ -168,13 +168,13 @@ Invariants (each has a test):
 - [ ] Settings: General, Code Generation, Sales & Credit, Tax, Document Numbers, Printing
 - [ ] Party Profile (CRUD, conditional credit limit, opening balance, delete protection, party import)
 - [ ] Cylinder Group (CRUD, code mode, delete protection)
-- [ ] `CodeGenerator` + `CylinderStatus` (+ unit tests)
+- [ ] `CodeGenerator` (configurable pattern still required) + `CylinderStatus` (+ unit tests)
 - [ ] Cylinders list/add/edit/history, summary cards, delete protection
 - [ ] Rate Configuration (gas rate per kg + per-group **cylinder price**, history, `RateService`)
 
 ### Phase 2 — Opening stock
 - [ ] `StockService` + `cylinder_movements`
-- [ ] Opening Stock entry (AUTO/MANUAL codes, location SHOP/ISSUED + customer, live status, shop gas total) + batch list/void
+- [~] Opening Stock entry (AUTO/MANUAL codes, location SHOP/ISSUED + customer, live status, shop gas total) + batch list/void — entry/history implemented; batch void and Excel import remain
 - [ ] Excel template download, upload, validation preview, commit, error report (`ImportService`)
 - [ ] Tests AT-1 … AT-5
 
@@ -233,8 +233,13 @@ vendor/bin/phpunit              # run tests
 
 | Date | Phase/Task | Status | Notes for next session |
 |---|---|---|---|
-| 2026-10-08 | Phase 0 — Foundation | Completed | Added custom PHP foundation, PDO migration/seed tooling, auth/security shell, responsive Bootstrap/jQuery UI, QA checklist and CI. Next: Phase 1 masters. |
+| 2026-10-08 | Phase 0 — Foundation | Completed | Added custom PHP foundation, PDO migration/seed tooling, auth/security shell, responsive Bootstrap/jQuery UI, QA checklist and CI. |
+| 2026-10-08 | Phase 1 review / Phase 2 start | In progress | Masters screens are present, but configurable code-pattern, master delete protection, party import, and complete Phase 1 QA remain. Opening Stock transaction/history foundation and deployment README added. |
 
 ## 15. Open questions for the product owner
 
 See `REQUIREMENTS.md` §11. Do not block on them: implement the stated default and keep it switchable.
+
+
+### 2026-10-08 Business-flow implementation rule
+- Transactional work must be verified end-to-end after each change. POS changes must exercise transaction-type selection, cylinder selection, pricing, stock movement, ledger posting, payment/cash integration, and failure rollback before being considered done.

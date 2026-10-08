@@ -5,9 +5,30 @@ declare(strict_types=1);
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\SettingsController;
+use App\Controllers\PartyController;
+use App\Controllers\CylinderGroupController;
+use App\Controllers\CylinderController;
+use App\Controllers\RateController;
+use App\Controllers\OpeningStockController;
+use App\Controllers\PosController;
+use App\Controllers\CounterController;
+use App\Services\CounterService;
+use App\Services\LedgerService;
+use App\Services\DocNumberService;
+use App\Services\CashService;
+use App\Services\PosService;
+use App\Services\RateService;
+use App\Repositories\PartyRepository;
+use App\Repositories\CylinderGroupRepository;
+use App\Repositories\CylinderRepository;
+use App\Repositories\RateRepository;
+use App\Repositories\StockBatchRepository;
+use App\Services\CodeGenerator;
+use App\Services\StockService;
+use App\Services\CylinderStatus;
+use App\Services\AuditService;
 use App\Core\Validator;
 use App\Controllers\PasswordController;
-use App\Services\AuditService;
 use App\Services\PasswordService;
 use App\Repositories\SettingsRepository;
 use App\Services\SettingsService;
@@ -16,10 +37,20 @@ $authController = new AuthController($auth, $request, new Validator(), $session)
 $passwordService = new PasswordService($db, new AuditService($db));
 $passwordController = new PasswordController($auth, $request, $session, new Validator(), $passwordService);
 $homeController = new HomeController($auth);
+$auditService = new AuditService($db);
+$partyController = new PartyController(new PartyRepository($db), $auth, $request, new Validator(), $session, $auditService);
+$groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService);
+$cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
+$rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
+$openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CodeGenerator($db)), $auth, $request, new Validator(), $auditService);
 $settingsController = new SettingsController(
     new SettingsService(new SettingsRepository($db)),
-    $auth
+    $auth,
+    $request,
+    $auditService
 );
+$counterController = new CounterController(new CounterService($db), $auth, $request);
+$posController = new PosController(new PosService($db, new DocNumberService($db), new LedgerService($db), new CashService($db), new RateService($db)), new RateService($db), $db, $auth, $request, new Validator());
 
 $router->get('/login', [$authController, 'showLogin']);
 $router->post('/login', [$authController, 'login']);
@@ -28,3 +59,31 @@ $router->get('/password/change', [$passwordController, 'show'], true);
 $router->post('/password/change', [$passwordController, 'change'], true);
 $router->get('/', [$homeController, 'index'], true, 'dashboard.view');
 $router->get('/settings', [$settingsController, 'index'], true, 'settings.view');
+$router->post('/settings/pos', [$settingsController, 'updatePos'], true, 'settings.manage');
+$router->get('/parties', [$partyController, 'index'], true, 'parties.view');
+$router->get('/parties/data', [$partyController, 'data'], true, 'parties.view');
+$router->post('/parties', [$partyController, 'store'], true, 'parties.create');
+$router->get('/cylinder-groups', [$groupController, 'index'], true, 'cylinder_groups.view');
+$router->get('/cylinder-groups/data', [$groupController, 'data'], true, 'cylinder_groups.view');
+$router->post('/cylinder-groups', [$groupController, 'store'], true, 'cylinder_groups.create');
+$router->get('/cylinders', [$cylinderController, 'index'], true, 'cylinders.view');
+$router->get('/cylinders/data', [$cylinderController, 'data'], true, 'cylinders.view');
+$router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.create');
+$router->get('/rates', [$rateController, 'index'], true, 'rates.view');
+$router->get('/rates/data', [$rateController, 'data'], true, 'rates.view');
+$router->post('/rates', [$rateController, 'store'], true, 'rates.create');
+$router->get('/opening-stock', [$openingStockController, 'index'], true, 'opening_stock.view');
+$router->get('/opening-stock/data', [$openingStockController, 'data'], true, 'opening_stock.view');
+$router->post('/opening-stock', [$openingStockController, 'store'], true, 'opening_stock.create');
+$router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'opening_stock.void');
+
+$router->get('/pos', [$posController, 'index'], true, 'sales.create');
+$router->get('/pos/cylinders', [$posController, 'cylinders'], true, 'sales.create');
+$router->get('/pos/customers', [$posController, 'customers'], true, 'sales.create');
+$router->get('/pos/config', [$posController, 'config'], true, 'sales.create');
+$router->post('/pos', [$posController, 'store'], true, 'sales.create');
+
+$router->get('/counter', [$counterController, 'index'], true, 'counter.view');
+$router->get('/counter/status', [$counterController, 'status'], true, 'counter.view');
+$router->post('/counter/open', [$counterController, 'open'], true, 'counter.open');
+$router->post('/counter/close', [$counterController, 'close'], true, 'counter.close');

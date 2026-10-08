@@ -17,6 +17,17 @@ $permissions = [
     ['settings.manage', 'Manage settings', 'settings'],
     ['users.view', 'View users', 'users'],
     ['users.manage', 'Manage users', 'users'],
+    ['opening_stock.view', 'View opening stock', 'opening_stock'],
+    ['opening_stock.create', 'Create opening stock', 'opening_stock'],
+    ['opening_stock.void', 'Void opening stock', 'opening_stock'],
+    ['parties.view', 'View parties', 'parties'],
+    ['parties.create', 'Create parties', 'parties'],
+    ['cylinder_groups.view', 'View cylinder groups', 'cylinder_groups'],
+    ['cylinder_groups.create', 'Create cylinder groups', 'cylinder_groups'],
+    ['cylinders.view', 'View cylinders', 'cylinders'],
+    ['cylinders.create', 'Create cylinders', 'cylinders'],
+    ['rates.view', 'View rates', 'rates'],
+    ['rates.create', 'Create rates', 'rates'],
 ];
 
 foreach ($permissions as [$code, $name, $module]) {
@@ -84,6 +95,7 @@ $settings = [
     ['sales_credit', 'gas_decimals', '3'],
     ['sales_credit', 'money_decimals', '2'],
     ['code_generation', 'cylinder_code_mode', 'AUTO'],
+    ['code_generation', 'cylinder_code_pattern', 'CYL-{GROUP}-{SEQ:6}'],
     ['tax', 'enabled', '0'],
     ['tax', 'rate_percent', '0.00'],
     ['printing', 'paper_size', '80MM'],
