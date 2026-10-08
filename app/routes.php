@@ -156,6 +156,7 @@ $router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'o
 $router->get('/opening-stock/import-template', [$importController, 'template'], true, 'opening_stock.create');
 $router->post('/opening-stock/import-preview', [$importController, 'preview'], true, 'opening_stock.create');
 $router->post('/opening-stock/import-commit', [$importController, 'commit'], true, 'opening_stock.create');
+$router->get('/imports/error-report', [$importController, 'errorReport'], true);
 
 $router->get('/pos', [$posController, 'index'], true, 'sales.create');
 $router->get('/pos/config', [$posController, 'config'], true, 'sales.create');
