@@ -74,6 +74,7 @@ $router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'o
 $router->get('/pos', [$posController, 'index'], true, 'sales.create');
 $router->get('/pos/cylinders', [$posController, 'cylinders'], true, 'sales.create');
 $router->get('/pos/customers', [$posController, 'customers'], true, 'sales.create');
+$router->get('/pos/config', [$posController, 'config'], true, 'sales.create');
 $router->post('/pos', [$posController, 'store'], true, 'sales.create');
 
 $router->get('/counter', [$counterController, 'index'], true, 'counter.view');
