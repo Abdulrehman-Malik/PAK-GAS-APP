@@ -13,7 +13,7 @@ final class MigrationService
     public function run(): array
     {
         $locked = (int) $this->db->pdo()->query("SELECT GET_LOCK('pak_gas_migrations', 30)")->fetchColumn() === 1;
-        if (!$locked) throw new \\RuntimeException('Could not acquire migration lock. Please try again.');
+        if (!$locked) throw new \RuntimeException('Could not acquire migration lock. Please try again.');
         try {
             return $this->runLocked();
         } finally {
