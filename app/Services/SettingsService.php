@@ -34,6 +34,9 @@ final class SettingsService
             if($key==='credit_limit_enforcement'&&!in_array(strtoupper($value),['BLOCK','WARN'],true))throw new \InvalidArgumentException('Credit enforcement must be BLOCK or WARN.');
             if($key==='default_payment_method'&&!in_array(strtoupper($value),['CASH','ONLINE','CHEQUE'],true))throw new \InvalidArgumentException('Invalid default payment method.');
             if(in_array($key,['allow_rate_edit','allow_advance','enabled','applies_to_gas'],true)&&!in_array($value,['0','1'],true))throw new \InvalidArgumentException($key.' must be 0 or 1.');
+            if(in_array($key,['gas_decimals','money_decimals','cylinder_seq_width','group_code_width'],true)&&(!ctype_digit($value)|| (int)$value<0 || (int)$value>12))throw new \InvalidArgumentException($key.' has an invalid value.');
+            if($key==='paper_size'&&!in_array(strtoupper($value),['80MM','A4'],true))throw new \InvalidArgumentException('Paper size must be 80MM or A4.');
+            if($key==='cheque_ledger_posting'&&!in_array(strtoupper($value),['ON_CLEARANCE','ON_RECEIPT'],true))throw new \InvalidArgumentException('Invalid cheque posting mode.');
             if($key==='rate_percent'&&(!is_numeric($value)||bccomp($value,'0',2)<0))throw new \InvalidArgumentException('Tax percentage cannot be negative.');
             $this->repository->set($group,$key,$value);
         }
