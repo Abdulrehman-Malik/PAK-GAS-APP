@@ -40,6 +40,8 @@ use App\Controllers\PasswordController;
 use App\Services\PasswordService;
 use App\Repositories\SettingsRepository;
 use App\Services\SettingsService;
+use App\Services\ImportService;
+use App\Services\XlsxService;
 use App\Services\UserService;
 use App\Services\ExpenseService;
 use App\Services\ChequeService;
@@ -56,7 +58,9 @@ $partyController = new PartyController(new PartyRepository($db), $auth, $request
 $groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService, new CodeGenerator($db));
 $cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
-$openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CodeGenerator($db)), $auth, $request, new Validator(), $auditService);
+$importStockService = new StockService($db, new CodeGenerator($db));
+$importService = new ImportService($db, new XlsxService(), $importStockService, $auditService);
+$openingStockController = new OpeningStockController(new StockBatchRepository($db), $importStockService, $db, $auth, $request, new Validator(), $auditService, $importService, new XlsxService());
 $settingsController = new SettingsController(
     new SettingsService(new SettingsRepository($db)),
     $auth,
@@ -126,6 +130,9 @@ $router->post('/rates', [$rateController, 'store'], true, 'rates.create');
 $router->get('/opening-stock', [$openingStockController, 'index'], true, 'opening_stock.view');
 $router->get('/opening-stock/data', [$openingStockController, 'data'], true, 'opening_stock.view');
 $router->post('/opening-stock', [$openingStockController, 'store'], true, 'opening_stock.create');
+$router->get('/opening-stock/template', [$openingStockController, 'template'], true, 'opening_stock.create');
+$router->post('/opening-stock/import/preview', [$openingStockController, 'importPreview'], true, 'opening_stock.create');
+$router->post('/opening-stock/import/commit', [$openingStockController, 'importCommit'], true, 'opening_stock.create');
 $router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'opening_stock.void');
 
 $router->get('/pos', [$posController, 'index'], true, 'sales.create');
