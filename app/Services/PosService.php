@@ -129,6 +129,7 @@ final class PosService
                     $soldCodes[]=$cylinder['code'];
                 } else {
                     if($cylinder['location']!=='CUSTOMER'||(int)$cylinder['customer_id']!==$customerId) throw new \InvalidArgumentException('Cylinder '.$cylinder['code'].' is not held by this customer.');
+                    if(bccomp($gas,$before,3)>0) throw new \InvalidArgumentException('Returned gas for '.$cylinder['code'].' cannot exceed the gas currently held by the customer ('.$before.' kg).');
                     if(bccomp($rate,'0.00',2)<=0 && bccomp($gas,'0.000',3)>0) throw new \InvalidArgumentException('Return rate must be greater than zero when gas is returned.');
                     $credit=bcmul($gas,$rate,2);
                     $amount=bcsub('0.00',$credit,2);
@@ -185,12 +186,25 @@ final class PosService
             $saleId=(int)$this->db->pdo()->lastInsertId();
 
             foreach($lineRows as $line){
+                $issueLineId=null;
+                if($line['type']==='RETURN'){
+                    $issueRow=$this->db->fetchOne(
+                        "SELECT sl.id FROM sale_lines sl
+                         INNER JOIN sales s ON s.id=sl.sale_id
+                         WHERE sl.cylinder_id=:cylinder AND sl.line_type='ISSUE'
+                           AND s.customer_id=:customer AND s.status='POSTED'
+                         ORDER BY sl.id DESC LIMIT 1 FOR UPDATE",
+                        ['cylinder'=>$line['cid'],'customer'=>$customerId]
+                    );
+                    if(!$issueRow)throw new \InvalidArgumentException('Original issue line not found for '.$line['cid'].'.');
+                    $issueLineId=(int)$issueRow['id'];
+                }
                 $this->db->execute(
-                    'INSERT INTO sale_lines(sale_id,line_type,cylinder_id,gas_kg,rate,cylinder_price,amount)
-                     VALUES(:sale,:type,:cylinder,:gas,:rate,:price,:amount)',
+                    'INSERT INTO sale_lines(sale_id,line_type,cylinder_id,gas_kg,rate,cylinder_price,amount,issue_line_id)
+                     VALUES(:sale,:type,:cylinder,:gas,:rate,:price,:amount,:issue_line)',
                     [
                         'sale'=>$saleId,'type'=>$line['type'],'cylinder'=>$line['cid'],'gas'=>$line['gas'],
-                        'rate'=>$line['rate'],'price'=>$line['cp'],'amount'=>$line['amount']
+                        'rate'=>$line['rate'],'price'=>$line['cp'],'amount'=>$line['amount'],'issue_line'=>$issueLineId
                     ]
                 );
 
@@ -329,6 +343,11 @@ final class PosService
         if(($filters['to']??'')!==''){$where[]='s.txn_date<=:to';$params['to']=$filters['to'];}
         if((int)($filters['customer_id']??0)>0){$where[]='s.customer_id=:customer';$params['customer']=(int)$filters['customer_id'];}
         if(($filters['status']??'')!==''){$where[]='s.status=:status';$params['status']=$filters['status'];}
+        if((int)($filters['user_id']??0)>0){$where[]='s.created_by=:created_user';$params['created_user']=(int)$filters['user_id'];}
+        if(($filters['line_type']??'')!==''){$where[]='EXISTS(SELECT 1 FROM sale_lines lx WHERE lx.sale_id=s.id AND lx.line_type=:line_type)';$params['line_type']=$filters['line_type'];}
+        if((int)($filters['group_id']??0)>0){$where[]='EXISTS(SELECT 1 FROM sale_lines lg INNER JOIN cylinders cgx ON cgx.id=lg.cylinder_id WHERE lg.sale_id=s.id AND cgx.group_id=:group_filter)';$params['group_filter']=(int)$filters['group_id'];}
+        if(($filters['cylinder_code']??'')!==''){$where[]='EXISTS(SELECT 1 FROM sale_lines sc INNER JOIN cylinders cc ON cc.id=sc.cylinder_id WHERE sc.sale_id=s.id AND cc.code=:cylinder_code)';$params['cylinder_code']=(string)$filters['cylinder_code'];}
+        if(($filters['payment_method']??'')!==''){$where[]='EXISTS(SELECT 1 FROM receipts rp WHERE rp.sale_id=s.id AND rp.method=:payment_method AND rp.status=\'POSTED\')';$params['payment_method']=$filters['payment_method'];}
         if(($filters['search']??'')!==''){$where[]='(s.doc_no LIKE :search OR p.name LIKE :search OR EXISTS(SELECT 1 FROM sale_lines sx INNER JOIN cylinders cx ON cx.id=sx.cylinder_id WHERE sx.sale_id=s.id AND cx.code LIKE :search))';$params['search']='%'.$filters['search'].'%';}
 
         $base='FROM sales s INNER JOIN parties p ON p.id=s.customer_id LEFT JOIN users u ON u.id=s.created_by WHERE '.implode(' AND ',$where);
