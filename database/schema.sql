@@ -1,7 +1,7 @@
 -- Pak Gas POS
--- Canonical Windows/XAMPP database bootstrap.
--- Creates the default database, all tables/views, indexes and static seed data.
--- The application DB name in .env must be: pak_gas
+-- Canonical clean-install database baseline.
+-- The web installer uses the database selected by DB_NAME in .env.
+-- Direct SQL import remains compatible with the default pak_gas database.
 
 CREATE DATABASE IF NOT EXISTS pak_gas
   CHARACTER SET utf8mb4
