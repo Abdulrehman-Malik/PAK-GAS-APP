@@ -313,28 +313,15 @@ All reports: date filters, print-friendly, export to Excel/CSV.
 ---
 
 ## 9. Non-functional requirements
-## 9.1 Application Bootstrap, Database Creation & Automatic Migrations [ADDED]
+## 9.1 Database Installation & Windows Bootstrap [UPDATED]
 
-- When the application reaches the login-page load, it must first establish the configured MySQL connection.
-- If DB_NAME does not exist, the application must create the configured database automatically using the configured DB host, port, username and password, then reconnect to it.
-- After a successful database connection, the application must check the migrations table and execute every pending SQL migration in natural filename order before the login page is rendered.
-- Already-applied migrations must be skipped and never executed again.
-- Migration execution must be serialized so simultaneous login-page requests cannot apply the same migration concurrently.
-- Each migration must be recorded only after its SQL completes successfully. A failed migration must stop the bootstrap and must not be marked as applied.
-- Database creation requires the configured DB user to have the MySQL CREATE DATABASE privilege. If automatic creation or migration fails, the login page must not continue as if the application were ready; the error must be logged and surfaced according to the application's environment/error-display policy.
-- The manual bin/migrate.php command remains available for administrators/deployment automation and must use the same migration engine as the login bootstrap.
-- No application code may hard-code a deployment URL; database configuration remains environment-driven through .env.
-
-
-- **Security:** password hashing (`password_hash`), session hardening, CSRF token on every state-changing request, output escaping, prepared statements only, per-action permission checks on the server (not only hidden buttons), login throttling, audit log.
-- **Integrity:** all stock/ledger/cash postings in single DB transactions; no partial saves.
-- **Usability:** English UI; Bootstrap 5.3 responsive layout; works on phones and tablets (POS cylinder boxes reflow into a grid); large tap targets; clear error messages; confirm on destructive actions.
-- **Performance:** server-side pagination for lists; popups load cylinders via AJAX and handle ≥ 2,000 cylinders smoothly; indexed queries; typical screen < 1 s on a basic shared host.
-- **Deployment:** runs on a standard LAMP/XAMPP stack (PHP 8.1+, MySQL 8 / MariaDB 10.6+); assets served locally (no CDN dependency) so the shop works with unreliable internet.
-- **Backup:** documented `mysqldump` backup/restore procedure; optional backup button for Admin.
-- **Browser support:** current Chrome, Edge, Firefox, Safari (mobile too).
-
----
+- The complete database baseline must live in one canonical SQL file: `database/schema.sql`.
+- `database/schema.sql` must create the configured baseline database (`pak_gas`), all tables, indexes, views and static seed data required by the application.
+- There must be no `database/migrations` directory and no runtime migration engine.
+- The application must not execute schema changes automatically during the login request.
+- Windows/XAMPP installation must import `database/schema.sql` before the application is opened.
+- The environment-based administrator credential remains handled by `bin/seed.php`, because its password must be hashed from `.env` at install time.
+- Future schema changes for this project are handled by updating the canonical schema baseline, not by adding migration scripts.
 
 ## 10. Acceptance scenarios (use as test cases)
 
@@ -386,3 +373,9 @@ All reports: date filters, print-friendly, export to Excel/CSV.
 6. Every sale needs a customer (issued cylinders must be linked). Create a generic "Walk-in" customer if needed (cash only, no credit).
 7. Posted documents are voided, not edited.
 8. "Daraz" in the original text is interpreted as **drawer** (cash drawer).
+
+
+## 2026-10-08 Database packaging decision
+- Database creation, table creation, indexes, views and static seed data are consolidated in `database/schema.sql`.
+- Legacy migration scripts and runtime migration execution are removed.
+- Windows/XAMPP is the documented installation target for this baseline.
