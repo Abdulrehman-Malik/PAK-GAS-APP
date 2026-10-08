@@ -144,6 +144,8 @@ $router->post('/rates', [$rateController, 'store'], true, 'rates.create');
 
 $router->get('/opening-stock', [$openingStockController, 'index'], true, 'opening_stock.view');
 $router->get('/opening-stock/data', [$openingStockController, 'data'], true, 'opening_stock.view');
+$router->get('/opening-stock/groups', [$openingStockController, 'groups'], true, 'opening_stock.view');
+$router->get('/opening-stock/customers', [$openingStockController, 'customers'], true, 'opening_stock.view');
 $router->post('/opening-stock', [$openingStockController, 'store'], true, 'opening_stock.create');
 $router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'opening_stock.void');
 $router->get('/opening-stock/import-template', [$importController, 'template'], true, 'opening_stock.create');
