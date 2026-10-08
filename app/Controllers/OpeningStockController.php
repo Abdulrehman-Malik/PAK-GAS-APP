@@ -52,7 +52,7 @@ final class OpeningStockController
                 ['group_code'=>'C','group_name'=>'15 KG Cylinder','capacity'=>'15.000','cylinder_code'=>'','quantity'=>'3','actual_gas'=>'15.000','location'=>'SHOP','customer_code'=>'','condition'=>'GOOD','date'=>date('Y-m-d'),'code_mode'=>'AUTO']
             ]
         );
-        return Response::binary((string)file_get_contents($path),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        return Response::binary((string)file_get_contents($path),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','opening_stock_template.xlsx');
     }
 
     public function importPreview():Response{
