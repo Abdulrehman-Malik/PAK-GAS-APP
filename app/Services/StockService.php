@@ -38,6 +38,7 @@ final class StockService
         if ($toLocation === 'CUSTOMER' && $customerId === null) {
             throw new \InvalidArgumentException('A customer is required when issuing a cylinder.');
         }
+        $movementCustomerId = $customerId;
         if ($toLocation !== 'CUSTOMER') {
             $customerId = null;
         }
@@ -71,7 +72,7 @@ final class StockService
                 'after' => $afterGas,
                 'from_location' => $cylinder['location'],
                 'to_location' => $toLocation,
-                'customer' => $customerId,
+                'customer' => $movementCustomerId,
                 'rate' => $rate,
                 'document_type' => $documentType,
                 'document_id' => $documentId,
@@ -86,6 +87,50 @@ final class StockService
             'to_location' => $toLocation,
             'customer_id' => $customerId,
         ];
+    }
+
+    public function reverseMovement(array $movement, int $userId, int $documentId, string $documentType = 'SALE_VOID'): void
+    {
+        $cylinder = $this->db->fetchOne(
+            'SELECT * FROM cylinders WHERE id=:id FOR UPDATE',
+            ['id'=>$movement['cylinder_id']]
+        );
+        if (!$cylinder) {
+            throw new \InvalidArgumentException('Cylinder no longer exists.');
+        }
+
+        $this->db->execute(
+            'UPDATE cylinders
+             SET gas_kg=:gas, location=:location, customer_id=:customer, updated_by=:user
+             WHERE id=:id',
+            [
+                'gas'=>$movement['before_gas_kg'],
+                'location'=>$movement['from_location'],
+                'customer'=>$movement['from_location']==='CUSTOMER'
+                    ? ($movement['customer_id'] !== null ? (int)$movement['customer_id'] : null)
+                    : null,
+                'user'=>$userId,
+                'id'=>$movement['cylinder_id'],
+            ]
+        );
+
+        $this->db->execute(
+            'INSERT INTO cylinder_movements
+             (cylinder_id,movement_type,before_gas_kg,after_gas_kg,from_location,to_location,customer_id,rate,source_document_type,source_document_id,created_by)
+             VALUES (:cylinder,\'VOID_REVERSAL\',:before,:after,:from_location,:to_location,:customer,:rate,:doc_type,:doc_id,:user)',
+            [
+                'cylinder'=>$movement['cylinder_id'],
+                'before'=>$cylinder['gas_kg'],
+                'after'=>$movement['before_gas_kg'],
+                'from_location'=>$cylinder['location'],
+                'to_location'=>$movement['from_location'],
+                'customer'=>$movement['customer_id'],
+                'rate'=>$movement['rate'],
+                'doc_type'=>$documentType,
+                'doc_id'=>$documentId,
+                'user'=>$userId,
+            ]
+        );
     }
 
     public function createPurchasedCylinder(
