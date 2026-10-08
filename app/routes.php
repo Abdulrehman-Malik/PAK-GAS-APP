@@ -10,6 +10,12 @@ use App\Controllers\CylinderGroupController;
 use App\Controllers\CylinderController;
 use App\Controllers\RateController;
 use App\Controllers\OpeningStockController;
+use App\Controllers\PosController;
+use App\Services\LedgerService;
+use App\Services\DocNumberService;
+use App\Services\CashService;
+use App\Services\PosService;
+use App\Services\RateService;
 use App\Repositories\PartyRepository;
 use App\Repositories\CylinderGroupRepository;
 use App\Repositories\CylinderRepository;
@@ -36,6 +42,7 @@ $cylinderController = new CylinderController(new CylinderRepository($db), new Co
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 $openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CodeGenerator($db)), $auth, $request, new Validator(), $auditService);
 $settingsController = new SettingsController(new SettingsService(new SettingsRepository($db)), $auth);
+$posController = new PosController(new PosService($db, new DocNumberService($db), new LedgerService($db), new CashService($db)), new RateService($db), $db, $auth, $request, new Validator());
 
 $router->get('/login', [$authController, 'showLogin']);
 $router->post('/login', [$authController, 'login']);
@@ -60,3 +67,8 @@ $router->get('/opening-stock', [$openingStockController, 'index'], true, 'openin
 $router->get('/opening-stock/data', [$openingStockController, 'data'], true, 'opening_stock.view');
 $router->post('/opening-stock', [$openingStockController, 'store'], true, 'opening_stock.create');
 $router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'opening_stock.void');
+
+$router->get('/pos', [$posController, 'index'], true, 'sales.create');
+$router->get('/pos/cylinders', [$posController, 'cylinders'], true, 'sales.create');
+$router->get('/pos/customers', [$posController, 'customers'], true, 'sales.create');
+$router->post('/pos', [$posController, 'store'], true, 'sales.create');
