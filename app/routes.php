@@ -144,7 +144,8 @@ $router->get('/pos/info', [$posController, 'info'], true, 'sales.create');
 $router->get('/pos/issued', [$posController, 'issued'], true, 'sales.create');
 $router->post('/pos', [$posController, 'store'], true, 'sales.create');
 
-$router->get('/sales-history', [$posController, 'history'], true, 'sales.view');
+$router->get('/sales-history', [$posController, 'historyPage'], true, 'sales.view');
+$router->get('/sales-history/data', [$posController, 'history'], true, 'sales.view');
 $router->get('/sales-history/detail', [$posController, 'detail'], true, 'sales.view');
 $router->post('/sales-history/void', [$posController, 'void'], true, 'sales.void');
 
