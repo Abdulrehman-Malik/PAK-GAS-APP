@@ -313,6 +313,18 @@ All reports: date filters, print-friendly, export to Excel/CSV.
 ---
 
 ## 9. Non-functional requirements
+## 9.1 Application Bootstrap, Database Creation & Automatic Migrations [ADDED]
+
+- When the application reaches the login-page load, it must first establish the configured MySQL connection.
+- If DB_NAME does not exist, the application must create the configured database automatically using the configured DB host, port, username and password, then reconnect to it.
+- After a successful database connection, the application must check the migrations table and execute every pending SQL migration in natural filename order before the login page is rendered.
+- Already-applied migrations must be skipped and never executed again.
+- Migration execution must be serialized so simultaneous login-page requests cannot apply the same migration concurrently.
+- Each migration must be recorded only after its SQL completes successfully. A failed migration must stop the bootstrap and must not be marked as applied.
+- Database creation requires the configured DB user to have the MySQL CREATE DATABASE privilege. If automatic creation or migration fails, the login page must not continue as if the application were ready; the error must be logged and surfaced according to the application's environment/error-display policy.
+- The manual bin/migrate.php command remains available for administrators/deployment automation and must use the same migration engine as the login bootstrap.
+- No application code may hard-code a deployment URL; database configuration remains environment-driven through .env.
+
 
 - **Security:** password hashing (`password_hash`), session hardening, CSRF token on every state-changing request, output escaping, prepared statements only, per-action permission checks on the server (not only hidden buttons), login throttling, audit log.
 - **Integrity:** all stock/ledger/cash postings in single DB transactions; no partial saves.
