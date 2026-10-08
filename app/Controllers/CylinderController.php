@@ -60,6 +60,24 @@ final class CylinderController
         }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
 
+    public function update():Response
+    {
+        try{
+            $d=$this->request->input();$id=(int)($d['id']??0);$row=$this->repo->find($id);
+            if(!$row)throw new \InvalidArgumentException('Cylinder not found.');
+            $data=[
+                'condition_code'=>strtoupper((string)($d['condition_code']??$row['condition_code'])),
+                'active'=>(int)($d['active']??$row['active']),
+                'notes'=>$d['notes']??null,
+                'uid'=>(int)$this->auth->user()['id']
+            ];
+            if(!in_array($data['condition_code'],['GOOD','DAMAGED'],true))throw new \InvalidArgumentException('Invalid condition.');
+            $this->repo->update($id,$data);
+            $this->audit->record((int)$this->auth->user()['id'],'UPDATE','cylinders',$id,$row,$data,$this->request->ip());
+            return Response::json(['ok'=>true,'message'=>'Cylinder updated.']);
+        }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
+    }
+
     public function history():Response
     {
         return Response::json(['ok'=>true,'data'=>$this->repo->history((int)($this->request->query()['id']??0))]);
