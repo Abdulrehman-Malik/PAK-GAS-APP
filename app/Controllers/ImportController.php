@@ -89,6 +89,8 @@ final class ImportController
         $token=(string)($this->request->query()['token']??'');
         $preview=$_SESSION['import_previews'][$token]??null;
         if(!$preview) return Response::json(['ok'=>false,'message'=>'Import preview not found or expired.'],404);
+        $requiredPermission=$preview['type']==='parties'?'parties.create':'opening_stock.create';
+        if(!$this->auth->can($requiredPermission)) return Response::json(['ok'=>false,'message'=>'Access denied.'],403);
 
         $handle=fopen('php://temp','r+');
         if($handle===false)throw new \RuntimeException('Unable to create report.');
