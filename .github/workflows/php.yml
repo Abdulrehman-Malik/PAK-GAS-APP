@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          docker run -d --name pak-gas-schema-test -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
+          docker run -d --name pak-gas-schema-test -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
           trap 'docker rm -f pak-gas-schema-test >/dev/null 2>&1 || true' EXIT
           ready=0
           for i in {1..30}; do
@@ -63,7 +63,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          export TEST_DB_HOST=127.0.0.1
+          export TEST_DB_HOST=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pak-gas-schema-test)
           export TEST_DB_PORT=3306
           export TEST_DB_NAME=pak_gas_installer_test
           export TEST_DB_USER=root
@@ -73,7 +73,7 @@ jobs:
           APP_URL=http://localhost
           APP_NAME=Pak Gas POS
           TIMEZONE=Asia/Karachi
-          DB_HOST=127.0.0.1
+          DB_HOST=$TEST_DB_HOST
           DB_PORT=3306
           DB_NAME=pak_gas_installer_test
           DB_USER=root
