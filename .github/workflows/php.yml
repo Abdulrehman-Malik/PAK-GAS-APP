@@ -1,5 +1,9 @@
 name: PHP CI
 
+concurrency:
+  group: pak-gas-php-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, feature/**, refactor/**]
