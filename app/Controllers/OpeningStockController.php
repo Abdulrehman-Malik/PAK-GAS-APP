@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Auth;
+use App\Core\DB;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Validator;
@@ -20,6 +21,7 @@ final class OpeningStockController
     public function __construct(
         private readonly StockBatchRepository $repo,
         private readonly StockService $stock,
+        private readonly DB $db,
         private readonly Auth $auth,
         private readonly Request $request,
         private readonly Validator $validator,
@@ -31,8 +33,8 @@ final class OpeningStockController
     public function index():Response{
         return View::render('opening-stock/index',[
             'pageTitle'=>'Opening Stock',
-            'groups'=>$this->dbGroups(),
-            'customers'=>$this->dbCustomers(),
+            'groups'=>$this->db->fetchAll('SELECT id,code,name,capacity_kg FROM cylinder_groups WHERE active=1 ORDER BY code'),
+            'customers'=>$this->db->fetchAll("SELECT id,code,name FROM parties WHERE party_type='CUSTOMER' AND active=1 ORDER BY name"),
             'user'=>$this->auth->user(),
             '_base_path'=>base_path()
         ]);
