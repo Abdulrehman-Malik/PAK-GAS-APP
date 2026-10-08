@@ -16,7 +16,7 @@ POS + inventory + ledger system for an LPG gas shop. Cylinders are issued to cus
 | Database | **MySQL 8 / MariaDB 10.6+**, InnoDB, `utf8mb4` |
 | Frontend | HTML5, CSS3, **Bootstrap 5.3**, **jQuery 3.7** (AJAX) |
 | UI plugins (allowed) | DataTables (server-side), Select2, SweetAlert2 or Bootstrap modals/toasts, Bootstrap Icons |
-| PHP libraries (allowed, via Composer) | `phpoffice/phpspreadsheet` (Excel import/export), `phpunit/phpunit` (dev). Ask before adding anything else. |
+| PHP libraries | None required at runtime. Keep the application Composer-free; use native PHP and the repository autoloader. Ask before adding third-party runtime libraries. |
 
 Rules:
 - **No PHP framework** (no Laravel/CodeIgniter/Symfony) and no JS framework (no React/Vue). Plain PHP + jQuery.
@@ -56,10 +56,10 @@ lpg-pos/
 │   └── routes.php            # route table
 ├── storage/
 │   ├── logs/  uploads/  imports/  backups/    # not web accessible
-└── tests/                    # PHPUnit: Unit/ (services), Feature/ (DB-backed)
+└── tests/                    # lightweight runtime/unit checks
 ```
 
-Autoloading: PSR-4 via Composer (`App\` → `app/`).
+Autoloading: Composer-free PSR-4-compatible loader in `bootstrap.php` (`App\` → `app/`).
 
 ## 4. Coding conventions
 
@@ -140,7 +140,7 @@ Invariants (each has a test):
 
 ## 9. Testing & quality
 
-- PHPUnit unit tests for: `CylinderStatus`, `CodeGenerator` (both modes, concurrency-safe increments), `RateService`, `LedgerService` balances, `PosService` (issue, return, exchange, rate edit, credit-limit, void conflicts), `CashService` expected balance.
+- Runtime/unit checks cover core invariants. Keep business-flow regression checks runnable without Composer.
 - Feature/DB tests for the acceptance scenarios **AT-1 … AT-20** in `REQUIREMENTS.md`. Name tests after the scenario ID.
 - `php -l` on all files; no PHP notices/warnings in logs during manual testing.
 - Manual QA script per phase (short checklist in the Progress Log).
