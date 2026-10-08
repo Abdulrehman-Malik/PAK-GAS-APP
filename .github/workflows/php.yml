@@ -156,6 +156,6 @@ jobs:
           APP_URL=http://127.0.0.1:8080 \
           CI_ADMIN_USERNAME=ci_admin \
           CI_ADMIN_PASSWORD='CiInstallerPassword123!' \
-          npx playwright node tests/browser/smoke.mjs
+          node tests/browser/smoke.mjs
 
           echo "Browser UI smoke test completed."
