@@ -33,7 +33,8 @@ lpg-pos/
 ├── bin/
 │   └── seed.php              # creates the environment-based administrator
 ├── database/
-│   └── schema.sql             # complete DB creation, tables, views, indexes and static seed data
+│   ├── schema.sql             # complete clean-install DB baseline + static seed data
+│   └── migrations/            # numbered future incremental DB changes, auto-applied by web installer
 ├── public/                   # web root (only this folder is exposed)
 │   ├── index.php             # front controller
 │   ├── .htaccess             # rewrite everything to index.php
@@ -129,7 +130,11 @@ Invariants (each has a test):
 
 ## 8. Database rules
 
-- Database baseline is one canonical SQL file: `database/schema.sql`. Do not add migration scripts.
+- Database baseline is one canonical SQL file: database/schema.sql.
+- Future incremental DB changes must be numbered SQL files under database/migrations/.
+- Never edit an already-applied migration; create a new migration instead.
+- The front controller redirects to /install whenever the baseline is missing or any migration is pending.
+- The web installer reads DB settings from .env, creates the configured database, imports the baseline, applies pending migrations and seeds the Administrator.
 - FKs on every relationship with `ON DELETE RESTRICT`; indexes on FKs and on common filters (`status`, `entry_date`, `code`, `location`).
 - Use `CHECK` constraints (MySQL 8) where possible; if running MariaDB/older MySQL, enforce in services as well.
 - Create SQL **views** for repeated reads (e.g. `v_cylinder_status`, `v_party_balance`, `v_shop_stock_summary`) so reports and screens agree.
@@ -258,3 +263,11 @@ See `REQUIREMENTS.md` §11. Do not block on them: implement the stated default a
 - [x] All database DDL, views, indexes and static seed records consolidated into `database/schema.sql`.
 - [x] Legacy `database/migrations/*.sql`, `bin/migrate.php`, `MigrationService` and automatic login-time migration execution removed.
 - [x] Windows/XAMPP installation documented around MySQL schema import plus `bin/seed.php` for the Admin credential.
+
+
+### 2026-10-08 Web Installer + Migration Queue
+- [x] Installation checks PHP version and mandatory extensions before database work.
+- [x] Database creation/import uses DB_HOST, DB_PORT, DB_NAME, DB_USER and DB_PASS from .env.
+- [x] Administrator is created from SEED_ADMIN_USERNAME and SEED_ADMIN_PASSWORD with password_hash().
+- [x] Future numbered SQL migrations are checksum-tracked in schema_migrations and auto-run from /install.
+- [x] Normal application requests are blocked/redirected to /install while a migration is pending.
