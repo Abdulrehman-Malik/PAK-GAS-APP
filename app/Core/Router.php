@@ -44,6 +44,15 @@ final class Router
                 return Response::redirect(url('/login'));
             }
 
+            if (
+                $route['auth_required']
+                && $this->auth->mustChangePassword()
+                && $path !== '/password/change'
+                && !($method === 'POST' && $path === '/logout')
+            ) {
+                return Response::redirect(url('/password/change'));
+            }
+
             if ($route['permission'] !== null) {
                 $this->auth->require($route['permission']);
             }
