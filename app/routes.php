@@ -42,7 +42,7 @@ $cylinderController = new CylinderController(new CylinderRepository($db), new Co
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 $openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CodeGenerator($db)), $auth, $request, new Validator(), $auditService);
 $settingsController = new SettingsController(new SettingsService(new SettingsRepository($db)), $auth);
-$posController = new PosController(new PosService($db, new DocNumberService($db), new LedgerService($db), new CashService($db)), new RateService($db), $db, $auth, $request, new Validator());
+$posController = new PosController(new PosService($db, new DocNumberService($db), new LedgerService($db), new CashService($db), new RateService($db)), new RateService($db), $db, $auth, $request, new Validator());
 
 $router->get('/login', [$authController, 'showLogin']);
 $router->post('/login', [$authController, 'login']);
