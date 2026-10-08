@@ -20,12 +20,6 @@ jobs:
           extensions: mbstring, pdo_mysql, gd, zip, xml, bcmath
           coverage: none
 
-      - name: Validate Composer
-        run: composer validate --no-check-publish
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
-
       - name: Lint PHP
         shell: bash
         run: |
@@ -34,5 +28,5 @@ jobs:
             php -l "$file"
           done < <(find . -type f -name '*.php' -not -path './vendor/*' -print0)
 
-      - name: PHPUnit
-        run: vendor/bin/phpunit
+      - name: Runtime unit checks
+        run: php bin/test.php
