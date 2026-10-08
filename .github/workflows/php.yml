@@ -75,7 +75,7 @@ jobs:
           TIMEZONE=Asia/Karachi
           DB_HOST=127.0.0.1
           DB_PORT=3306
-          DB_NAME=pak_gas
+          DB_NAME=pak_gas_installer_test
           DB_USER=root
           DB_PASS=root
           SEED_ADMIN_USERNAME=ci_admin
