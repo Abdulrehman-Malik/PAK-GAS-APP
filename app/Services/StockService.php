@@ -285,7 +285,7 @@ final class StockService
     {
         if($rows===[])throw new \InvalidArgumentException('At least one opening-stock row is required.');
 
-        $work=function():int use($rows,$userId,$source,$notes){
+        $work=function() use($rows,$userId,$source,$notes):int {
             $batchDate=(string)$rows[0]['batch_date'];
             foreach($rows as $row){
                 if((string)$row['batch_date']!==$batchDate){
