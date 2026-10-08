@@ -16,6 +16,42 @@ final class ReceiptService
     ) {
     }
 
+    public function list(array $where, array $params, int $limit, int $offset): array
+    {
+        $params['limit']=$limit;
+        $params['offset']=$offset;
+        return $this->db->fetchAll(
+            'SELECT r.*,p.code party_code,p.name party_name,u.full_name user_name,
+                    ch.cheque_no,ch.bank,ch.cheque_date,ch.status cheque_status,
+                    s.doc_no sale_doc
+             FROM receipts r
+             INNER JOIN parties p ON p.id=r.party_id
+             LEFT JOIN users u ON u.id=r.created_by
+             LEFT JOIN cheques ch ON ch.id=r.cheque_id
+             LEFT JOIN sales s ON s.id=r.sale_id
+             WHERE '.implode(' AND ',$where).'
+             ORDER BY r.receipt_date DESC,r.id DESC LIMIT :limit OFFSET :offset',
+            $params
+        );
+    }
+
+    public function dbCount(string $base, array $params): int
+    {
+        return (int)($this->db->fetchOne('SELECT COUNT(*) c '.$base,$params)['c']??0);
+    }
+
+    public function customers(string $q): array
+    {
+        return $this->db->fetchAll(
+            "SELECT id,code,name,allow_credit,credit_limit
+             FROM parties
+             WHERE party_type='CUSTOMER' AND active=1
+               AND (code LIKE :q OR name LIKE :q OR phone LIKE :q)
+             ORDER BY name LIMIT 30",
+            ['q'=>'%'.$q.'%']
+        );
+    }
+
     public function post(array $input, int $userId): array
     {
         $date = (string) ($input['receipt_date'] ?? date('Y-m-d'));
