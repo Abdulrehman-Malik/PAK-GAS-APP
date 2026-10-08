@@ -32,15 +32,15 @@ final class ReceiptController
     public function data(): Response
     {
         $q=$this->request->query();
-        $rows=$this->db->fetchAll(
-            "SELECT r.id,r.doc_no,r.receipt_date,r.amount,r.method,r.source,r.status,
-                    p.code customer_code,p.name customer_name
-             FROM receipts r JOIN parties p ON p.id=r.party_id
-             WHERE r.receipt_date BETWEEN :from AND :to
-             ORDER BY r.id DESC LIMIT 200",
-            ['from'=>(string)($q['from']??date('Y-m-d')),'to'=>(string)($q['to']??date('Y-m-d'))]
-        );
+        $rows=$this->db->fetchAll("SELECT r.id,r.doc_no,r.receipt_date,r.amount,r.method,r.source,r.status,p.code customer_code,p.name customer_name FROM receipts r JOIN parties p ON p.id=r.party_id WHERE r.receipt_date BETWEEN :from AND :to ORDER BY r.id DESC LIMIT 200",['from'=>(string)($q['from']??date('Y-m-d')),'to'=>(string)($q['to']??date('Y-m-d'))]);
         return Response::json(['ok'=>true,'data'=>['rows'=>$rows]]);
+    }
+
+    public function print(int $id): Response
+    {
+        $receipt=$this->db->fetchOne("SELECT r.*,p.code customer_code,p.name customer_name FROM receipts r JOIN parties p ON p.id=r.party_id WHERE r.id=:id",['id'=>$id]);
+        if(!$receipt)return Response::html(View::errorPage('Receipt not found.',404),404);
+        return View::render('print/receipt',['receipt'=>$receipt,'appName'=>\App\Core\Config::load(base_path())['app_name'],'user'=>$this->auth->user()],null);
     }
 
     public function store(): Response
