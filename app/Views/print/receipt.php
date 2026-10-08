@@ -16,7 +16,7 @@
 <div>Customer: <?=e($receipt['customer_code'].' - '.$receipt['customer_name'])?></div>
 <div>Method: <?=e($receipt['method'])?></div>
 <div class="line"></div>
-<div class="row"><span>Amount</span><strong><?=number_format((float)$receipt['amount'],2)?></strong></div>
+<div class="row"><span>Amount</span><strong><?=e(money((string)$receipt['amount']))?></strong></div>
 <div class="row amount"><span>Received</span><span><?=number_format((float)$receipt['amount'],2)?></span></div>
 <div class="line"></div>
 <div class="center small">Thank you</div>
