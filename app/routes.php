@@ -12,6 +12,13 @@ use App\Controllers\RateController;
 use App\Controllers\OpeningStockController;
 use App\Controllers\PosController;
 use App\Controllers\SalesController;
+use App\Controllers\ReportController;
+use App\Controllers\UserController;
+use App\Controllers\ExpenseController;
+use App\Controllers\ChequeController;
+use App\Controllers\PurchaseController;
+use App\Controllers\PaymentController;
+use App\Controllers\ReceiptController;
 use App\Controllers\CounterController;
 use App\Services\CounterService;
 use App\Services\LedgerService;
@@ -70,6 +77,20 @@ $posController = new PosController(
     new Validator()
 );
 $salesController = new SalesController($db, $auth, $request, $posService);
+$receiptService = new ReceiptService($db, new DocNumberService($db), new LedgerService($db), new CashService($db), $auditService);
+$paymentService = new PaymentService($db, new DocNumberService($db), new LedgerService($db), new CashService($db), $auditService);
+$purchaseService = new PurchaseService($db, new DocNumberService($db), new LedgerService($db), new CashService($db), $posStockService, new CodeGenerator($db), $auditService);
+$chequeService = new ChequeService($db, new LedgerService($db), $auditService);
+$expenseService = new ExpenseService($db, new CashService($db), $auditService);
+$userService = new UserService($db, $auditService);
+$receiptController = new ReceiptController($db, $auth, $request, $receiptService);
+$paymentController = new PaymentController($db, $auth, $request, $paymentService);
+$purchaseController = new PurchaseController($db, $auth, $request, $purchaseService);
+$chequeController = new ChequeController($db, $auth, $request, $chequeService);
+$expenseController = new ExpenseController($db, $auth, $request, $expenseService);
+$userController = new UserController($db, $auth, $request, $userService);
+$reportController = new ReportController($db, $auth, $request);
+
 
 $router->get('/login', [$authController, 'showLogin']);
 $router->post('/login', [$authController, 'login']);
@@ -106,6 +127,40 @@ $router->get('/sales', [$salesController, 'index'], true, 'sales.view');
 $router->get('/sales/data', [$salesController, 'data'], true, 'sales.view');
 $router->get('/sales/{id}', [$salesController, 'detail'], true, 'sales.view');
 $router->post('/sales/{id}/void', [$salesController, 'void'], true, 'sales.void');
+
+$router->get('/receipts', [$receiptController, 'index'], true, 'receipts.view');
+$router->get('/receipts/data', [$receiptController, 'data'], true, 'receipts.view');
+$router->post('/receipts', [$receiptController, 'store'], true, 'receipts.create');
+$router->post('/receipts/{id}/void', [$receiptController, 'void'], true, 'receipts.void');
+
+$router->get('/purchases', [$purchaseController, 'index'], true, 'purchases.view');
+$router->get('/purchases/data', [$purchaseController, 'data'], true, 'purchases.view');
+$router->post('/purchases', [$purchaseController, 'store'], true, 'purchases.create');
+$router->post('/purchases/{id}/void', [$purchaseController, 'void'], true, 'purchases.void');
+
+$router->get('/payments', [$paymentController, 'index'], true, 'payments.view');
+$router->get('/payments/data', [$paymentController, 'data'], true, 'payments.view');
+$router->post('/payments', [$paymentController, 'store'], true, 'payments.create');
+$router->post('/payments/{id}/void', [$paymentController, 'void'], true, 'payments.void');
+
+$router->get('/cheques', [$chequeController, 'index'], true, 'cheques.view');
+$router->get('/cheques/data', [$chequeController, 'data'], true, 'cheques.view');
+$router->post('/cheques/{id}/clear', [$chequeController, 'clear'], true, 'cheques.manage');
+$router->post('/cheques/{id}/bounce', [$chequeController, 'bounce'], true, 'cheques.manage');
+
+$router->get('/expenses', [$expenseController, 'index'], true, 'expenses.view');
+$router->get('/expenses/data', [$expenseController, 'data'], true, 'expenses.view');
+$router->post('/expenses', [$expenseController, 'store'], true, 'expenses.create');
+$router->post('/expenses/{id}/void', [$expenseController, 'void'], true, 'expenses.void');
+
+$router->get('/users', [$userController, 'index'], true, 'users.view');
+$router->post('/users', [$userController, 'save'], true, 'users.manage');
+$router->get('/users/roles/{role}/permissions', [$userController, 'rolePermissions'], true, 'users.view');
+$router->post('/users/roles/{role}/permissions', [$userController, 'saveRolePermissions'], true, 'users.manage');
+
+$router->get('/reports', [$reportController, 'index'], true, 'reports.view');
+$router->get('/reports/data', [$reportController, 'data'], true, 'reports.view');
+$router->get('/reports/csv', [$reportController, 'csv'], true, 'reports.view');
 
 $router->get('/counter', [$counterController, 'index'], true, 'counter.view');
 $router->get('/counter/status', [$counterController, 'status'], true, 'counter.view');
