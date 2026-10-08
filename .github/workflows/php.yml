@@ -45,3 +45,21 @@ jobs:
           done
           docker exec -i pak-gas-schema-test mariadb -h 127.0.0.1 -uroot -proot < database/schema.sql
           docker exec pak-gas-schema-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas; SELECT COUNT(*) AS tables_count FROM information_schema.tables WHERE table_schema='pak_gas' AND table_type='BASE TABLE'; SELECT COUNT(*) AS permission_count FROM permissions; SELECT COUNT(*) AS settings_count FROM settings; SELECT COUNT(*) AS view_count FROM information_schema.views WHERE table_schema='pak_gas';"
+
+      - name: Installer migration smoke test
+        shell: bash
+        run: |
+          set -e
+          cat > database/migrations/999_ci_installer_smoke.sql <<'SQL'
+          CREATE TABLE IF NOT EXISTS ci_installer_smoke (
+              id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          ) ENGINE=InnoDB;
+          SQL
+          export TEST_DB_HOST=127.0.0.1
+          export TEST_DB_PORT=3306
+          export TEST_DB_NAME=pak_gas
+          export TEST_DB_USER=root
+          export TEST_DB_PASS=root
+          php bin/test-installer.php
+          docker exec pak-gas-schema-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas; SHOW TABLES LIKE 'ci_installer_smoke'; SELECT migration FROM schema_migrations WHERE migration='999_ci_installer_smoke.sql';"
