@@ -117,6 +117,9 @@ $router->post('/cylinder-groups/{id}/delete', [$groupController, 'delete'], true
 $router->get('/cylinders', [$cylinderController, 'index'], true, 'cylinders.view');
 $router->get('/cylinders/data', [$cylinderController, 'data'], true, 'cylinders.view');
 $router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.create');
+$router->get('/cylinders/{id}/history', [$cylinderController, 'history'], true, 'cylinders.view');
+$router->post('/cylinders/{id}', [$cylinderController, 'update'], true, 'cylinders.create');
+$router->post('/cylinders/{id}/delete', [$cylinderController, 'delete'], true, 'cylinders.create');
 $router->get('/rates', [$rateController, 'index'], true, 'rates.view');
 $router->get('/rates/data', [$rateController, 'data'], true, 'rates.view');
 $router->post('/rates', [$rateController, 'store'], true, 'rates.create');
