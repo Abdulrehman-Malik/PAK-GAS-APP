@@ -168,13 +168,13 @@ Invariants (each has a test):
 - [ ] Settings: General, Code Generation, Sales & Credit, Tax, Document Numbers, Printing
 - [ ] Party Profile (CRUD, conditional credit limit, opening balance, delete protection, party import)
 - [ ] Cylinder Group (CRUD, code mode, delete protection)
-- [ ] `CodeGenerator` + `CylinderStatus` (+ unit tests)
+- [ ] `CodeGenerator` (configurable pattern still required) + `CylinderStatus` (+ unit tests)
 - [ ] Cylinders list/add/edit/history, summary cards, delete protection
 - [ ] Rate Configuration (gas rate per kg + per-group **cylinder price**, history, `RateService`)
 
 ### Phase 2 — Opening stock
 - [ ] `StockService` + `cylinder_movements`
-- [ ] Opening Stock entry (AUTO/MANUAL codes, location SHOP/ISSUED + customer, live status, shop gas total) + batch list/void
+- [~] Opening Stock entry (AUTO/MANUAL codes, location SHOP/ISSUED + customer, live status, shop gas total) + batch list/void — entry/history implemented; batch void and Excel import remain
 - [ ] Excel template download, upload, validation preview, commit, error report (`ImportService`)
 - [ ] Tests AT-1 … AT-5
 
@@ -233,7 +233,8 @@ vendor/bin/phpunit              # run tests
 
 | Date | Phase/Task | Status | Notes for next session |
 |---|---|---|---|
-| 2026-10-08 | Phase 0 — Foundation | Completed | Added custom PHP foundation, PDO migration/seed tooling, auth/security shell, responsive Bootstrap/jQuery UI, QA checklist and CI. Next: Phase 1 masters. |
+| 2026-10-08 | Phase 0 — Foundation | Completed | Added custom PHP foundation, PDO migration/seed tooling, auth/security shell, responsive Bootstrap/jQuery UI, QA checklist and CI. |
+| 2026-10-08 | Phase 1 review / Phase 2 start | In progress | Masters screens are present, but configurable code-pattern, master delete protection, party import, and complete Phase 1 QA remain. Opening Stock transaction/history foundation and deployment README added. |
 
 ## 15. Open questions for the product owner
 
