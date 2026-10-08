@@ -103,6 +103,7 @@ $router->post('/settings/pos', [$settingsController, 'updatePos'], true, 'settin
 $router->get('/parties', [$partyController, 'index'], true, 'parties.view');
 $router->get('/parties/data', [$partyController, 'data'], true, 'parties.view');
 $router->post('/parties', [$partyController, 'store'], true, 'parties.create');
+$router->post('/parties/{id}/delete', [$partyController, 'delete'], true, 'parties.create');
 $router->get('/cylinder-groups', [$groupController, 'index'], true, 'cylinder_groups.view');
 $router->get('/cylinder-groups/data', [$groupController, 'data'], true, 'cylinder_groups.view');
 $router->post('/cylinder-groups', [$groupController, 'store'], true, 'cylinder_groups.create');
