@@ -261,8 +261,6 @@ See `REQUIREMENTS.md` §11. Do not block on them: implement the stated default a
 
 ## 2026-10-08 Database installation decision
 - [x] All database DDL, views, indexes and static seed records consolidated into `database/schema.sql`.
-- [x] Legacy `database/migrations/*.sql`, `bin/migrate.php`, `MigrationService` and automatic login-time migration execution removed.
-- [x] Windows/XAMPP installation documented around MySQL schema import plus `bin/seed.php` for the Admin credential.
 
 
 ### 2026-10-08 Web Installer + Migration Queue
