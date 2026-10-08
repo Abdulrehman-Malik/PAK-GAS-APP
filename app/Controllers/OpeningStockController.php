@@ -6,6 +6,21 @@ final class OpeningStockController {
  public function __construct(private readonly StockBatchRepository $repo,private readonly StockService $stock,private readonly Auth $auth,private readonly Request $request,private readonly Validator $validator,private readonly AuditService $audit){}
  public function index():Response{return View::render('opening-stock/index',['pageTitle'=>'Opening Stock','user'=>$this->auth->user(),'_base_path'=>base_path()]);}
  public function data():Response{$q=$this->request->query();return Response::json(['ok'=>true,'data'=>$this->repo->paginate((string)($q['from']??''),(string)($q['to']??''),min(100,max(10,(int)($q['limit']??25))),max(0,(int)($q['offset']??0)))]);}
+ public function void(): Response
+ {
+  $d=$this->request->input();
+  $id=(int)($d['id']??0);
+  $reason=trim((string)($d['reason']??''));
+  if($id<1 || $reason==='') return Response::json(['ok'=>false,'message'=>'Batch ID and void reason are required.'],422);
+  $user=$this->auth->user();
+  try {
+   $this->stock->voidOpeningBatch($id,(int)$user['id'],$reason);
+   $this->audit->record((int)$user['id'],'VOID','stock_batches',$id,null,['reason'=>$reason],$this->request->ip());
+   return Response::json(['ok'=>true,'message'=>'Opening stock batch voided']);
+  } catch(\Throwable $x) {
+   return Response::json(['ok'=>false,'message'=>$x->getMessage()],422);
+  }
+ }
  public function store():Response {
   $d=$this->request->input();$e=$this->validator->validate($d,['batch_date'=>['required'],'group_id'=>['required'],'actual_gas'=>['required'],'location'=>['required'],'condition_code'=>['required'],'quantity'=>['required']]);if($e)return Response::json(['ok'=>false,'message'=>'Validation failed','errors'=>$e],422);
   $user=$this->auth->user();$codes=[];$raw=trim((string)($d['codes']??''));if($raw!=='')$codes=preg_split('/[\s,]+/',$raw,-1,PREG_SPLIT_NO_EMPTY)?:[];
