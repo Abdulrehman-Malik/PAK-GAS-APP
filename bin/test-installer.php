@@ -27,15 +27,47 @@ $config = [
 ];
 
 $installer = new InstallerService($config);
-$status = $installer->status();
 
-if (!$status['installed']) {
+$status = null;
+for ($attempt = 1; $attempt <= 30; $attempt++) {
+    $status = $installer->status();
+    if (($status['db_error'] ?? null) === null) {
+        break;
+    }
+    usleep(500000);
+}
+
+if (!is_array($status) || ($status['db_error'] ?? null) !== null) {
     throw new RuntimeException(
-        'Installer smoke test requires an initialized schema: ' . ($status['db_error'] ?? 'schema not detected')
+        'Installer smoke test could not connect to the test database: ' .
+        (($status['db_error'] ?? null) ?: 'unknown error')
     );
 }
 
-$pending = $status['pending_migrations'];
+if (!$status['installed']) {
+    $result = $installer->install();
+
+    if (($result['admin_username'] ?? '') !== 'ci_admin') {
+        throw new RuntimeException('Installer did not create the expected administrator.');
+    }
+
+    $status = $installer->status();
+    if (!$status['installed'] || ($status['pending_migrations'] ?? []) !== []) {
+        throw new RuntimeException('Fresh installation did not finish cleanly.');
+    }
+}
+
+$migrationPath = $basePath . '/database/migrations/999_ci_installer_smoke.sql';
+$migrationSql = "CREATE TABLE IF NOT EXISTS ci_installer_smoke (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;";
+if (file_put_contents($migrationPath, $migrationSql) === false) {
+    throw new RuntimeException('Unable to create the CI migration fixture.');
+}
+
+try {
+    $pending = $installer->status()['pending_migrations'] ?? [];
 if (count($pending) !== 1 || ($pending[0]['name'] ?? '') !== '999_ci_installer_smoke.sql') {
     throw new RuntimeException('Expected exactly one CI migration to be pending.');
 }
@@ -56,3 +88,6 @@ if ($statusAfter['pending_migrations'] !== []) {
 }
 
 echo "Installer/migration smoke test passed." . PHP_EOL;
+} finally {
+    @unlink($migrationPath);
+}
