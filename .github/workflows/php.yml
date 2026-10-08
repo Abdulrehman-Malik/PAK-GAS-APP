@@ -95,7 +95,7 @@ jobs:
           docker exec pak-gas-installer-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas_installer_test; SHOW TABLES LIKE 'ci_installer_smoke'; SELECT migration FROM schema_migrations WHERE migration='999_ci_installer_smoke.sql';"
  
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: pak-gas-playwright-chromium-v1-${{ runner.os }}
