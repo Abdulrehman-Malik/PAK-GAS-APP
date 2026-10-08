@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace App\Services;
 use App\Core\DB;
 final class PosService {
- public function __construct(private readonly DB $db,private readonly DocNumberService $docs,private readonly LedgerService $ledger,private readonly CashService $cash){}
+ public function __construct(private readonly DB $db,private readonly DocNumberService $docs,private readonly LedgerService $ledger,private readonly CashService $cash,private readonly RateService $rates){}
  public function post(array $input,int $userId): array {
   $date=(string)$input['txn_date'];$customerId=(int)$input['customer_id'];$counterId=(int)($input['counter_id']??0);$method=(string)($input['method']??'CASH');$received=(string)($input['received_amount']??'0.00');$lines=$input['lines']??[];$txnType=(string)($input['transaction_type']??'GAS_SALE');
   if(!in_array($txnType,['GAS_SALE','EMPTY_CYLINDER_SALE'],true)) throw new \InvalidArgumentException('Transaction type is not supported.');
@@ -20,6 +20,7 @@ final class PosService {
     $c=$this->db->fetchOne('SELECT c.*,cg.capacity_kg FROM cylinders c JOIN cylinder_groups cg ON cg.id=c.group_id WHERE c.id=:id AND c.active=1 FOR UPDATE',['id'=>$cid]);
     if(!$c||$c['condition_code']!=='GOOD') throw new \InvalidArgumentException('Cylinder is unavailable.');
     $before=(string)$c['gas_kg'];$cap=(string)$c['capacity_kg'];
+    $resolved=$this->rates->resolve((int)$c['group_id'],$date); if(bccomp($rate,'0.00',2)<=0)$rate=(string)$resolved['gas_rate']; if(bccomp($cprice,'0.00',2)<=0)$cprice=(string)$resolved['cylinder_price'];
     if(in_array($type,['ISSUE','SELL_FILLED'],true)&&bccomp($gas,'0',3)<=0) throw new \InvalidArgumentException('Gas quantity must be greater than zero.');
     if(bccomp($gas,'0',3)<0||bccomp($gas,$cap,3)>0) throw new \InvalidArgumentException('Gas quantity exceeds cylinder capacity.');
     if(in_array($type,['ISSUE','SELL_FILLED'],true)&&bccomp($rate,'0.00',2)<=0) throw new \InvalidArgumentException('Gas rate must be greater than zero.');
