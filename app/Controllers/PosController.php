@@ -110,6 +110,11 @@ final class PosController
         catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
 
+    public function historyPage():Response
+    {
+        return View::render('sales-history/index',['pageTitle'=>'Sales History','user'=>$this->auth->user(),'today'=>date('Y-m-d'),'_base_path'=>base_path()]);
+    }
+
     public function history():Response
     {
         $q=$this->request->query();
