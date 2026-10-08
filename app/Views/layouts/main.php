@@ -57,6 +57,9 @@ $user = $user ?? null;
             <?php if ($GLOBALS['auth']->can('users.view')): ?>
                 <a class="nav-link" href="<?= e(url('/users')) ?>">Users & Roles</a>
             <?php endif; ?>
+            <?php if ($GLOBALS['auth']->can('users.view')): ?>
+                <a class="nav-link" href="<?= e(url('/audit')) ?>">Audit Log</a>
+            <?php endif; ?>
 
             <?php if ($GLOBALS['auth']->can('settings.view')): ?>
                 <a class="nav-link" href="<?= e(url('/settings')) ?>">Settings</a>
