@@ -498,12 +498,6 @@ CREATE TABLE IF NOT EXISTS expenses (
     INDEX idx_expenses_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS migrations (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL UNIQUE,
-    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS cylinder_movements (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     cylinder_id BIGINT UNSIGNED NOT NULL,
@@ -646,6 +640,8 @@ CROSS JOIN permissions p
 WHERE r.code='ADMIN';
 
 INSERT INTO settings(setting_group,setting_key,setting_value) VALUES
+('general','app_name','Pak Gas POS'),
+('general','timezone','Asia/Karachi'),
 ('general','date_format','d-m-Y'),
 ('general','currency_symbol','PKR'),
 ('general','session_required','1'),
