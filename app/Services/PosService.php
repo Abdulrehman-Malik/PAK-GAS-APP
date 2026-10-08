@@ -13,7 +13,9 @@ final class PosService
         private readonly DocNumberService $docs,
         private readonly LedgerService $ledger,
         private readonly CashService $cash,
-        private readonly RateService $rates
+        private readonly RateService $rates,
+        private readonly StockService $stock,
+        private readonly AuditService $audit
     ) {
     }
 
@@ -282,40 +284,18 @@ final class PosService
                     ]
                 );
 
-                $this->db->execute(
-                    'UPDATE cylinders
-                     SET gas_kg = :gas, location = :location, customer_id = :customer, updated_by = :user
-                     WHERE id = :id',
-                    [
-                        'gas' => $line['after'],
-                        'location' => $line['to'],
-                        'customer' => $line['customer'],
-                        'user' => $userId,
-                        'id' => $line['cid'],
-                    ]
-                );
-
-                $this->db->execute(
-                    'INSERT INTO cylinder_movements
-                     (cylinder_id, movement_type, before_gas_kg, after_gas_kg, from_location, to_location,
-                      customer_id, rate, source_document_type, source_document_id, created_by)
-                     VALUES
-                     (:cylinder, :movement, :before, :after, :from_location, :to_location,
-                      :customer, :rate, \'SALE\', :sale, :user)',
-                    [
-                        'cylinder' => $line['cid'],
-                        'movement' => $line['type'] === 'RETURN'
-                            ? 'RETURN'
-                            : ($line['type'] === 'ISSUE' ? 'ISSUE' : 'SALE_OUT'),
-                        'before' => $line['before'],
-                        'after' => $line['after'],
-                        'from_location' => $line['from'],
-                        'to_location' => $line['to'],
-                        'customer' => $line['customer'],
-                        'rate' => $line['rate'],
-                        'sale' => $saleId,
-                        'user' => $userId,
-                    ]
+                $this->stock->moveCylinder(
+                    $line['cid'],
+                    $line['to'],
+                    $line['customer'],
+                    $line['after'],
+                    $line['type'] === 'RETURN'
+                        ? 'RETURN'
+                        : ($line['type'] === 'ISSUE' ? 'ISSUE' : 'SALE_OUT'),
+                    $line['rate'],
+                    'SALE',
+                    $saleId,
+                    $userId
                 );
             }
 
@@ -389,6 +369,13 @@ final class PosService
                     );
                 }
             }
+
+            $this->audit->record($userId, 'CREATE', 'sales', $saleId, null, [
+                'doc_no' => $doc,
+                'transaction_type' => $txnType,
+                'net_amount' => $net,
+                'received_amount' => $received,
+            ], null);
 
             return [
                 'id' => $saleId,
