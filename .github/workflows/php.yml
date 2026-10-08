@@ -136,14 +136,15 @@ jobs:
           cat > /tmp/pak-gas-router.php <<'PHP'
           <?php
           $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-          $file = getcwd() . '/public' . $path;
+          $publicRoot = getcwd() . '/public';
+          $file = $publicRoot . $path;
           if ($path !== '/' && is_file($file)) {
               return false;
           }
-          require getcwd() . '/public/index.php';
+          require $publicRoot . '/index.php';
           PHP
 
-          php -S 127.0.0.1:8080 /tmp/pak-gas-router.php > /tmp/pak-gas-browser.log 2>&1 &
+          php -S 127.0.0.1:8080 -t public /tmp/pak-gas-router.php > /tmp/pak-gas-browser.log 2>&1 &
           PHP_SERVER_PID=$!
 
           for i in {1..20}; do
