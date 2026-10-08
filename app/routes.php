@@ -138,6 +138,7 @@ $router->get('/cylinders', [$cylinderController, 'index'], true, 'cylinders.view
 $router->get('/cylinders/data', [$cylinderController, 'data'], true, 'cylinders.view');
 $router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.create');
 $router->post('/cylinders/update', [$cylinderController, 'update'], true, 'cylinders.create');
+$router->post('/cylinders/adjust', [$cylinderController, 'adjust'], true, 'cylinders.adjust');
 $router->get('/cylinders/history', [$cylinderController, 'history'], true, 'cylinders.view');
 $router->post('/cylinders/delete', [$cylinderController, 'delete'], true, 'cylinders.create');
 $router->post('/cylinders/deactivate', [$cylinderController, 'deactivate'], true, 'cylinders.create');
