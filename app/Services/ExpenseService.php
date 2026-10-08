@@ -36,10 +36,10 @@ final class ExpenseService
 
             $doc=$this->docs->next('EXPENSE');
             $this->db->execute(
-                'INSERT INTO expenses(expense_date,category_id,amount,method,counter_id,reference_no,payee,notes,status,created_by)
+                'INSERT INTO expenses(doc_no,expense_date,category_id,amount,method,counter_id,reference_no,payee,notes,status,created_by)
                  VALUES(:date,:category,:amount,:method,:counter,:reference,:payee,:notes,\'POSTED\',:user)',
                 [
-                    'date'=>$date,'category'=>$categoryId,'amount'=>$amount,'method'=>$method,'counter'=>$counterId,
+                    'doc'=>$doc,'date'=>$date,'category'=>$categoryId,'amount'=>$amount,'method'=>$method,'counter'=>$counterId,
                     'reference'=>trim((string)($input['reference_no']??''))?:null,
                     'payee'=>trim((string)($input['payee']??''))?:null,
                     'notes'=>trim((string)($input['notes']??''))?:null,'user'=>$userId
