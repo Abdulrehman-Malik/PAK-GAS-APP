@@ -59,7 +59,7 @@ final class ReceiptService
                         'bank'=>trim((string)($input['cheque_bank'] ?? '')) ?: null,
                         'date'=>$chequeDate,
                         'amount'=>$amount,
-                        'status'=>$this->postingMode()==='ON_RECEIPT'?'CLEARED':'PENDING',
+                        'status'=>'PENDING',
                         'user'=>$userId,
                     ]
                 );
