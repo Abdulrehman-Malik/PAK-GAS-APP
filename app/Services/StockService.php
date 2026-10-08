@@ -89,6 +89,28 @@ final class StockService
         ];
     }
 
+    public function adjustGas(int $cylinderId,string $newGas,string $reason,int $userId):array
+    {
+        $reason=trim($reason);
+        if($reason==='')throw new \InvalidArgumentException('Adjustment reason is required.');
+        return $this->db->transaction(function()use($cylinderId,$newGas,$reason,$userId):array{
+            $cylinder=$this->db->fetchOne(
+                'SELECT c.*,cg.capacity_kg FROM cylinders c INNER JOIN cylinder_groups cg ON cg.id=c.group_id WHERE c.id=:id FOR UPDATE',
+                ['id'=>$cylinderId]
+            );
+            if(!$cylinder||!(int)$cylinder['active'])throw new \InvalidArgumentException('Cylinder not found or inactive.');
+            if($cylinder['location']!=='SHOP')throw new \InvalidArgumentException('Only cylinders currently in SHOP can be adjusted.');
+            if($cylinder['condition_code']!=='GOOD')throw new \InvalidArgumentException('Damaged cylinders cannot be adjusted.');
+            if(bccomp($newGas,'0.000',3)<0||bccomp($newGas,(string)$cylinder['capacity_kg'],3)>0)throw new \InvalidArgumentException('Adjusted gas is outside cylinder capacity.');
+
+            $this->move(
+                $cylinderId,'ADJUSTMENT','SHOP',$newGas,null,'0.00','CYLINDER_ADJUSTMENT',$cylinderId,$userId,$reason
+            );
+
+            return ['before'=>$cylinder['gas_kg'],'after'=>$newGas,'reason'=>$reason];
+        });
+    }
+
     public function reverseMovement(array $movement, int $userId, int $documentId, string $documentType = 'SALE_VOID'): void
     {
         $cylinder = $this->db->fetchOne(
