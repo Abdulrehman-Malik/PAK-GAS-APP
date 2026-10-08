@@ -11,6 +11,7 @@ use App\Controllers\CylinderController;
 use App\Controllers\RateController;
 use App\Controllers\OpeningStockController;
 use App\Controllers\PosController;
+use App\Controllers\SalesController;
 use App\Controllers\CounterController;
 use App\Services\CounterService;
 use App\Services\LedgerService;
@@ -51,22 +52,24 @@ $settingsController = new SettingsController(
 );
 $counterController = new CounterController(new CounterService($db), $auth, $request);
 $posStockService = new StockService($db, new CodeGenerator($db));
+$posService = new PosService(
+    $db,
+    new DocNumberService($db),
+    new LedgerService($db),
+    new CashService($db),
+    new RateService($db),
+    $posStockService,
+    $auditService
+);
 $posController = new PosController(
-    new PosService(
-        $db,
-        new DocNumberService($db),
-        new LedgerService($db),
-        new CashService($db),
-        new RateService($db),
-        $posStockService,
-        $auditService
-    ),
+    $posService,
     new RateService($db),
     $db,
     $auth,
     $request,
     new Validator()
 );
+$salesController = new SalesController($db, $auth, $request, $posService);
 
 $router->get('/login', [$authController, 'showLogin']);
 $router->post('/login', [$authController, 'login']);
@@ -96,8 +99,13 @@ $router->post('/opening-stock/void', [$openingStockController, 'void'], true, 'o
 $router->get('/pos', [$posController, 'index'], true, 'sales.create');
 $router->get('/pos/cylinders', [$posController, 'cylinders'], true, 'sales.create');
 $router->get('/pos/customers', [$posController, 'customers'], true, 'sales.create');
+$router->get('/pos/issued/{customerId}', [$posController, 'issued'], true, 'sales.create');
 $router->get('/pos/config', [$posController, 'config'], true, 'sales.create');
 $router->post('/pos', [$posController, 'store'], true, 'sales.create');
+$router->get('/sales', [$salesController, 'index'], true, 'sales.view');
+$router->get('/sales/data', [$salesController, 'data'], true, 'sales.view');
+$router->get('/sales/{id}', [$salesController, 'detail'], true, 'sales.view');
+$router->post('/sales/{id}/void', [$salesController, 'void'], true, 'sales.void');
 
 $router->get('/counter', [$counterController, 'index'], true, 'counter.view');
 $router->get('/counter/status', [$counterController, 'status'], true, 'counter.view');
