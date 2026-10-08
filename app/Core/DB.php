@@ -29,6 +29,7 @@ final class DB
     }
 
     public function pdo(): PDO { return $this->pdo; }
+    public function lastInsertId(): int { return (int) $this->pdo->lastInsertId(); }
     public function execute(string $sql, array $params = []): PDOStatement { $statement = $this->pdo->prepare($sql); $statement->execute($params); return $statement; }
     public function fetchOne(string $sql, array $params = []): ?array { $row = $this->execute($sql, $params)->fetch(); return $row === false ? null : $row; }
     public function fetchAll(string $sql, array $params = []): array { return $this->execute($sql, $params)->fetchAll(); }
