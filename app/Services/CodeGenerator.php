@@ -45,7 +45,8 @@ final class CodeGenerator
             )
         );
 
-        $capacity=rtrim(rtrim(number_format((float)$group['capacity_kg'],3,'.',''),'0'),'.');
+        $capacity=trim((string)$group['capacity_kg']);
+        $capacity=rtrim(rtrim($capacity,'0'),'.');
         $capacity=str_replace('.','_',$capacity);
 
         $render=$pattern;
