@@ -24,6 +24,10 @@ $user = $user ?? null;
             <a class="nav-link" href="<?= e(url('/')) ?>">Dashboard</a>
             <?php if ($GLOBALS['auth']->can('settings.view')): ?>
                 <a class="nav-link" href="<?= e(url('/settings')) ?>">Settings</a>
+                <a class="nav-link" href="<?= e(url('/parties')) ?>">Parties</a>
+                <a class="nav-link" href="<?= e(url('/cylinder-groups')) ?>">Cylinder Groups</a>
+                <a class="nav-link" href="<?= e(url('/cylinders')) ?>">Cylinders</a>
+                <a class="nav-link" href="<?= e(url('/rates')) ?>">Rates</a>
             <?php endif; ?>
         </nav>
         <div class="sidebar-footer">
