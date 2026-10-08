@@ -197,8 +197,14 @@ final class InstallerService
         }
 
         $this->ensureMigrationTable($db);
+
+        // Only create/reset the administrator during the initial installation.
+        // Later visits to /install are for database migrations and must not
+        // change credentials without an explicit authenticated user action.
         $this->markBaseline($db);
-        $this->seedAdmin($db);
+        if (!$status['installed']) {
+            $this->seedAdmin($db);
+        }
 
         $applied = $this->runPendingMigrations($db);
 
