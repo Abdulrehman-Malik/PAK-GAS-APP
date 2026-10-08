@@ -92,7 +92,7 @@ final class XlsxService
                     $assoc[$header] = (string) ($row[$i] ?? '');
                 }
             }
-            if (array_filter($assoc, static fn ($value): bool => trim((string) $value) !== '') {
+            if (array_filter($assoc, static fn ($value): bool => trim((string) $value) !== '') !== []) {
                 $result[] = $assoc;
             }
         }
