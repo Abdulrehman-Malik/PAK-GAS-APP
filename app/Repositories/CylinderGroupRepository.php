@@ -14,4 +14,6 @@ final class CylinderGroupRepository
     public function find(int $id):?array{return $this->db->fetchOne('SELECT * FROM cylinder_groups WHERE id=:id',['id'=>$id]);}
     public function create(array $d):int{$this->db->execute('INSERT INTO cylinder_groups(code,name,capacity_kg,cylinder_price,active,notes,created_by,updated_by) VALUES(:code,:name,:capacity_kg,:cylinder_price,1,:notes,:uid,:uid)',$d);return $this->db->lastInsertId();}
     public function update(int $id,array $d):void{$d['id']=$id;$this->db->execute('UPDATE cylinder_groups SET name=:name,capacity_kg=:capacity_kg,cylinder_price=:cylinder_price,active=:active,notes=:notes,updated_by=:uid WHERE id=:id',$d);}
+    public function setActive(int $id,int $active,int $userId):void{$this->db->execute('UPDATE cylinder_groups SET active=:active,updated_by=:user WHERE id=:id',['active'=>$active,'user'=>$userId,'id'=>$id]);}
+    public function delete(int $id):void{$this->db->execute('DELETE FROM cylinder_groups WHERE id=:id',['id'=>$id]);}
 }
