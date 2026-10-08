@@ -164,5 +164,7 @@ $router->get('/reports/csv', [$reportController, 'csv'], true, 'reports.view');
 
 $router->get('/counter', [$counterController, 'index'], true, 'counter.view');
 $router->get('/counter/status', [$counterController, 'status'], true, 'counter.view');
+$router->get('/counter/summary', [$counterController, 'summary'], true, 'counter.view');
 $router->post('/counter/open', [$counterController, 'open'], true, 'counter.open');
+$router->post('/counter/manual', [$counterController, 'manual'], true, 'counter.open');
 $router->post('/counter/close', [$counterController, 'close'], true, 'counter.close');
