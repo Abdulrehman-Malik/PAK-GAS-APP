@@ -269,9 +269,10 @@ final class InstallerService
                     );
                 }
 
-                $db->beginTransaction();
-
                 try {
+                    // MySQL/MariaDB may implicitly commit DDL statements.
+                    // Commit only when the migration still has an active transaction.
+                    $db->beginTransaction();
                     $db->exec($sql);
 
                     $statement = $db->prepare(
@@ -283,7 +284,9 @@ final class InstallerService
                         'checksum' => $checksum,
                     ]);
 
-                    $db->commit();
+                    if ($db->inTransaction()) {
+                        $db->commit();
+                    }
                 } catch (\Throwable $exception) {
                     if ($db->inTransaction()) {
                         $db->rollBack();
