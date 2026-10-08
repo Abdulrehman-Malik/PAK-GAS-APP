@@ -259,58 +259,98 @@ final class StockService
         });
     }
 
-    public function createOpeningBatch(array $rows,int $userId,string $source='MANUAL',?string $notes=null): int
+    public function createOpeningBatch(array $rows,int $userId,string $source='MANUAL',?string $notes=null):int
     {
-        if ($rows === []) throw new \InvalidArgumentException('At least one opening-stock row is required.');
-        return $this->db->transaction(function() use($rows,$userId,$source,$notes): int {
-            $batchDate = (string)$rows[0]['batch_date'];
-            foreach ($rows as $row) {
-                if ((string)$row['batch_date'] !== $batchDate) throw new \InvalidArgumentException('All rows in a batch must use the same date.');
+        if($rows===[])throw new \InvalidArgumentException('At least one opening-stock row is required.');
+
+        $work=function():int use($rows,$userId,$source,$notes){
+            $batchDate=(string)$rows[0]['batch_date'];
+            foreach($rows as $row){
+                if((string)$row['batch_date']!==$batchDate){
+                    throw new \InvalidArgumentException('All rows in a batch must use the same date.');
+                }
             }
-            $this->db->execute('INSERT INTO stock_batches(batch_date,source,status,notes,created_by) VALUES(:batch_date,:source,\'POSTED\',:notes,:uid)',
-                ['batch_date'=>$batchDate,'source'=>$source,'notes'=>$notes,'uid'=>$userId]);
-            $batchId=(int)$this->db->lastInsertId();
+
+            $this->db->execute(
+                "INSERT INTO stock_batches(batch_date,source,status,notes,created_by)
+                 VALUES(:date,:source,'POSTED',:notes,:user)",
+                ['date'=>$batchDate,'source'=>$source,'notes'=>$notes,'user'=>$userId]
+            );
+            $batchId=(int)$this->db->pdo()->lastInsertId();
 
             foreach($rows as $row){
-                $group=$this->db->fetchOne('SELECT id,code,capacity_kg FROM cylinder_groups WHERE id=:id AND active=1 FOR UPDATE',['id'=>(int)$row['group_id']]);
-                if(!$group) throw new \InvalidArgumentException('Cylinder group is not active or does not exist.');
+                $group=$this->db->fetchOne(
+                    'SELECT id,code,capacity_kg FROM cylinder_groups WHERE id=:id AND active=1 FOR UPDATE',
+                    ['id'=>(int)$row['group_id']]
+                );
+                if(!$group)throw new \InvalidArgumentException('Cylinder group is invalid or inactive.');
+
                 $gas=(string)$row['actual_gas'];
-                if(bccomp($gas,'0.000',3)<0 || bccomp($gas,(string)$group['capacity_kg'],3)>0) {
+                if(bccomp($gas,'0.000',3)<0||bccomp($gas,(string)$group['capacity_kg'],3)>0){
                     throw new \InvalidArgumentException('Actual gas must be between 0 and cylinder capacity.');
                 }
+
                 $location=(string)$row['location'];
-                if(!in_array($location,['SHOP','ISSUED'],true)) throw new \InvalidArgumentException('Invalid opening-stock location.');
+                if(!in_array($location,['SHOP','ISSUED'],true))throw new \InvalidArgumentException('Invalid opening-stock location.');
+
                 $customerId=$row['customer_id']!==null?(int)$row['customer_id']:null;
                 if($location==='ISSUED'){
-                    if($customerId===null) throw new \InvalidArgumentException('Issued opening stock requires a customer.');
-                    $customer=$this->db->fetchOne('SELECT id FROM parties WHERE id=:id AND party_type=\'CUSTOMER\' AND active=1',['id'=>$customerId]);
-                    if(!$customer) throw new \InvalidArgumentException('Selected customer is invalid or inactive.');
-                } elseif($customerId !== null) {
+                    if($customerId===null)throw new \InvalidArgumentException('Issued opening stock requires a customer.');
+                    $customer=$this->db->fetchOne(
+                        "SELECT id FROM parties WHERE id=:id AND party_type='CUSTOMER' AND active=1",
+                        ['id'=>$customerId]
+                    );
+                    if(!$customer)throw new \InvalidArgumentException('Selected customer is invalid or inactive.');
+                }elseif($customerId!==null){
                     throw new \InvalidArgumentException('A SHOP cylinder cannot be linked to a customer.');
                 }
 
                 $quantity=(int)$row['quantity'];
-                if($quantity<1 || $quantity>1000) throw new \InvalidArgumentException('Quantity must be between 1 and 1000.');
+                if($quantity<1||$quantity>1000)throw new \InvalidArgumentException('Quantity must be between 1 and 1000.');
                 $codes=$row['codes']??[];
-                if($row['code_mode']==='MANUAL' && count($codes)!==$quantity) {
-                    throw new \InvalidArgumentException('Manual mode requires exactly one unique code per cylinder.');
-                }
-                if($row['code_mode']==='MANUAL' && count(array_unique(array_map('strtoupper',$codes)))!==$quantity) {
-                    throw new \InvalidArgumentException('Manual cylinder codes must be unique.');
+                if(!is_array($codes))$codes=preg_split('/[\s,]+/',(string)$codes,-1,PREG_SPLIT_NO_EMPTY)?:[];
+
+                if(strtoupper((string)$row['code_mode'])==='MANUAL'){
+                    if(count($codes)!==$quantity)throw new \InvalidArgumentException('Manual mode requires exactly one unique code per cylinder.');
+                    $normalized=array_map(static fn($v):string=>strtoupper(trim((string)$v)),$codes);
+                    if(count(array_unique($normalized))!==$quantity)throw new \InvalidArgumentException('Manual cylinder codes must be unique.');
+                    $codes=$normalized;
                 }
 
                 for($i=0;$i<$quantity;$i++){
-                    $code=$this->codes->nextCylinderCode((int)$group['id'],(string)$group['code'],(string)$row['code_mode'],(string)($codes[$i]??''));
-                    $this->db->execute('INSERT INTO cylinders(code,group_id,gas_kg,location,customer_id,condition_code,source,active,created_by,updated_by) VALUES(:code,:group_id,:gas_kg,:location,:customer_id,:condition_code,'OPENING',1,:uid,:uid)',[
-                        'code'=>$code,'group_id'=>$group['id'],'gas_kg'=>$gas,'location'=>$location==='ISSUED'?'CUSTOMER':'SHOP','customer_id'=>$customerId,'condition_code'=>$row['condition_code'],'uid'=>$userId
-                    ]);
-                    $cylinderId=(int)$this->db->lastInsertId();
-                    $this->db->execute('INSERT INTO cylinder_movements(cylinder_id,movement_type,before_gas_kg,after_gas_kg,from_location,to_location,customer_id,source_document_type,source_document_id,stock_batch_id,created_by) VALUES(:cid,\'OPENING\',0,:gas,\'SHOP\',:loc,:customer,NULL,:batch,:batch,:uid)',[
-                        'cid'=>$cylinderId,'gas'=>$gas,'loc'=>$location==='ISSUED'?'CUSTOMER':'SHOP','customer'=>$customerId,'batch'=>$batchId,'uid'=>$userId
-                    ]);
+                    $code=$this->codes->nextCylinderCode(
+                        (int)$group['id'],
+                        (string)$group['code'],
+                        strtoupper((string)$row['code_mode']),
+                        (string)($codes[$i]??'')
+                    );
+                    $this->db->execute(
+                        "INSERT INTO cylinders(code,group_id,gas_kg,location,customer_id,condition_code,source,active,created_by,updated_by)
+                         VALUES(:code,:group,:gas,:location,:customer,:condition,'OPENING',1,:user,:user)",
+                        [
+                            'code'=>$code,'group'=>$group['id'],'gas'=>$gas,
+                            'location'=>$location==='ISSUED'?'CUSTOMER':'SHOP',
+                            'customer'=>$customerId,'condition'=>$row['condition_code'],'user'=>$userId
+                        ]
+                    );
+                    $cylinderId=(int)$this->db->pdo()->lastInsertId();
+                    $this->db->execute(
+                        "INSERT INTO cylinder_movements
+                         (cylinder_id,movement_type,before_gas_kg,after_gas_kg,from_location,to_location,customer_id,source_document_type,source_document_id,stock_batch_id,created_by)
+                         VALUES(:cylinder,'OPENING',0,:gas,'SHOP',:location,:customer,NULL,:batch,:batch,:user)",
+                        [
+                            'cylinder'=>$cylinderId,'gas'=>$gas,
+                            'location'=>$location==='ISSUED'?'CUSTOMER':'SHOP',
+                            'customer'=>$customerId,'batch'=>$batchId,'user'=>$userId
+                        ]
+                    );
                 }
             }
             return $batchId;
-        });
+        };
+
+        if($this->db->pdo()->inTransaction())return $work();
+        return $this->db->transaction($work);
     }
+
 }
