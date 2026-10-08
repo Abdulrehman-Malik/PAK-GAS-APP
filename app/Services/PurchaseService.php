@@ -38,6 +38,11 @@ final class PurchaseService
         return ['rows'=>$rows,'total'=>$total];
     }
 
+    public function groups():array
+    {
+        return $this->db->fetchAll('SELECT id,code,name,capacity_kg FROM cylinder_groups WHERE active=1 ORDER BY code');
+    }
+
     public function suppliers(string $q):array
     {
         return $this->db->fetchAll(
