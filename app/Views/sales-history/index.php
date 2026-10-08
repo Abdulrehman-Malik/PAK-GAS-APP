@@ -3,9 +3,15 @@
 <div class="card shadow-sm mb-3"><div class="card-body"><div class="row g-2">
 <div class="col-md-2"><label class="form-label">From</label><input id="from" type="date" class="form-control" value="<?=e($today)?>"></div>
 <div class="col-md-2"><label class="form-label">To</label><input id="to" type="date" class="form-control" value="<?=e($today)?>"></div>
-<div class="col-md-3"><label class="form-label">Search</label><input id="search" class="form-control" placeholder="Doc, customer, cylinder"></div>
+<div class="col-md-2"><label class="form-label">Customer</label><select id="customer" class="form-select"><option value="">All</option></select></div>
+<div class="col-md-2"><label class="form-label">Group</label><select id="group" class="form-select"><option value="">All</option></select></div>
+<div class="col-md-2"><label class="form-label">Line Type</label><select id="lineType" class="form-select"><option value="">All</option><option>ISSUE</option><option>RETURN</option><option>SELL_FILLED</option><option>SELL_EMPTY</option></select></div>
+<div class="col-md-2"><label class="form-label">Payment</label><select id="payment" class="form-select"><option value="">All</option><option>CASH</option><option>ONLINE</option><option>CHEQUE</option></select></div>
 <div class="col-md-2"><label class="form-label">Status</label><select id="status" class="form-select"><option value="">All</option><option>POSTED</option><option>VOID</option></select></div>
-<div class="col-md-3 d-flex align-items-end gap-2"><button id="run" class="btn btn-primary">Search</button><button id="export" class="btn btn-outline-secondary">CSV</button></div>
+<div class="col-md-3"><label class="form-label">Cylinder Code</label><input id="cylinderCode" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">Search</label><input id="search" class="form-control" placeholder="Doc / customer / cylinder"></div>
+<div class="col-md-2 d-flex align-items-end"><button id="run" class="btn btn-primary w-100">Search</button></div>
+<div class="col-md-2 d-flex align-items-end"><button id="export" class="btn btn-outline-secondary w-100">CSV</button></div>
 </div></div></div>
 <div class="card shadow-sm"><div class="card-body"><div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Document</th><th>Date</th><th>Customer</th><th>Lines</th><th>Sold</th><th>Net</th><th>Received</th><th>Balance</th><th>User</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></div></div>
 <div class="modal fade" id="detailModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 id="detailTitle">Sale Detail</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="detailBody"></div></div></div></div>
@@ -13,9 +19,17 @@
 $(function(){
  const b=<?=json_encode(url('/'))?>;const modal=new bootstrap.Modal(document.getElementById('detailModal'));
  function esc(v){return $('<div>').text(v??'').html();}function msg(t,c='success'){$('#msg').removeClass('d-none alert-success alert-danger').addClass('alert-'+c).text(t);}
- function params(){return{from:$('#from').val(),to:$('#to').val(),search:$('#search').val(),status:$('#status').val(),limit:100,offset:0};}
- function load(){ $.getJSON(b+'sales-history/data',params()).done(r=>{const x=$('#rows').empty();(r.data.rows||[]).forEach(a=>x.append('<tr><td>'+esc(a.doc_no)+'</td><td>'+esc(a.txn_date)+'</td><td>'+esc(a.customer_name)+'</td><td>'+a.lines_count+'</td><td>'+a.sold_count+'</td><td>'+Number(a.net_amount).toFixed(2)+'</td><td>'+Number(a.received_amount).toFixed(2)+'</td><td>'+Number(a.balance_after).toFixed(2)+'</td><td>'+esc(a.user_name)+'</td><td>'+esc(a.status)+'</td><td><button class="btn btn-sm btn-outline-secondary detail" data-id="'+a.id+'">Detail</button> '+(a.status==='POSTED'?'<button class="btn btn-sm btn-outline-danger void" data-id="'+a.id+'">Void</button>':'')+'</td></tr>'));});}
+ function params(){return{from:$('#from').val(),to:$('#to').val(),customer_id:$('#customer').val(),group_id:$('#group').val(),line_type:$('#lineType').val(),payment_method:$('#payment').val(),status:$('#status').val(),cylinder_code:$('#cylinderCode').val(),search:$('#search').val(),limit:100,offset:0};}
+ function load(){ $.getJSON(b+'sales-history/data',params()).done(r=>{const x=$('#rows').empty();(r.data.rows||[]).forEach(a=>x.append('<tr><td>'+esc(a.doc_no)+'</td><td>'+esc(a.txn_date)+'</td><td>'+esc(a.customer_name)+'</td><td>'+a.lines_count+'</td><td>'+a.sold_count+'</td><td>'+Number(a.net_amount).toFixed(2)+'</td><td>'+Number(a.received_amount).toFixed(2)+'</td><td>'+Number(a.balance_after).toFixed(2)+'</td><td>'+esc(a.user_name)+'</td><td>'+esc(a.status)+'</td><td><button class="btn btn-sm btn-outline-secondary detail" data-id="'+a.id+'">Detail</button> '+(a.status==='POSTED'?'<button class="btn btn-sm btn-outline-danger void" data-id="'+a.id+'">Void</button>':'')+'</td></tr>'));}).fail(x=>msg(x.responseJSON?.message||'Sales history failed.','danger')); }
  function detail(id){$.getJSON(b+'sales-history/detail',{id}).done(r=>{if(!r.ok){msg(r.message,'danger');return;}const d=r.data;let h='<div class="mb-2"><strong>'+esc(d.doc_no)+'</strong> · '+esc(d.customer_name)+' · '+esc(d.txn_date)+'</div><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Type</th><th>Cylinder</th><th>Gas</th><th>Rate</th><th>Price</th><th>Amount</th></tr></thead><tbody>';(d.lines||[]).forEach(l=>h+='<tr><td>'+esc(l.line_type)+'</td><td>'+esc(l.cylinder_code)+'</td><td>'+Number(l.gas_kg).toFixed(3)+'</td><td>'+Number(l.rate).toFixed(2)+'</td><td>'+Number(l.cylinder_price).toFixed(2)+'</td><td>'+Number(l.amount).toFixed(2)+'</td></tr>');h+='</tbody></table></div><div class="row g-2"><div class="col">Net: <strong>'+Number(d.net_amount).toFixed(2)+'</strong></div><div class="col">Received: <strong>'+Number(d.received_amount).toFixed(2)+'</strong></div><div class="col">Balance: <strong>'+Number(d.balance_after).toFixed(2)+'</strong></div></div>';$('#detailTitle').text('Sale '+d.doc_no);$('#detailBody').html(h);modal.show();});}
- $('#run').click(load);$('#from,#to,#status').on('change',load);$('#search').on('keyup',load);$('#rows').on('click','.detail',function(){detail($(this).data('id'));});$('#rows').on('click','.void',function(){const id=$(this).data('id');const reason=prompt('Void reason');if(!reason)return;$.post(b+'sales-history/void',{id,reason}).done(r=>{msg(r.message,r.ok?'success':'danger');if(r.ok)load();});});$('#export').click(()=>{const p=params();p.type='sales';window.location=b+'reports/export?'+new URLSearchParams(p).toString();});load();
+ function loadFilters(){
+   $.getJSON(b+'pos/customers',{q:''},r=>(r.data||[]).forEach(a=>$('#customer').append(new Option(a.code+' - '+a.name,a.id))));
+   $.getJSON(b+'cylinder-groups/data',{limit:100},r=>(r.data.rows||[]).forEach(a=>$('#group').append(new Option(a.code+' - '+a.name,a.id))));
+ }
+ $('#run').click(load);$('#from,#to,#customer,#group,#lineType,#payment,#status').on('change',load);$('#search,#cylinderCode').on('keyup',function(e){if(e.key==='Enter')load();});
+ $('#rows').on('click','.detail',function(){detail($(this).data('id'));});
+ $('#rows').on('click','.void',function(){const id=$(this).data('id');const reason=prompt('Void reason');if(!reason)return;$.post(b+'sales-history/void',{id,reason}).done(r=>{msg(r.message,r.ok?'success':'danger');if(r.ok)load();});});
+ $('#export').click(()=>{const p=params();p.type='sales';window.location=b+'reports/export?'+new URLSearchParams(p).toString();});
+ loadFilters();load();
 });
 </script>
