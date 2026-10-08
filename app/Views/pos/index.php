@@ -149,7 +149,7 @@ function loadCylinders(){
        '</div></div>'
      );
    });
-   $group=$('#group');const old=$group.val();$group.empty().append(new Option('All groups','0'));Object.entries(groups).forEach(a=>$group.append(new Option(a[1],a[0])));if(groups[old])$group.val(old);
+   const $group=$('#group');const old=$group.val();$group.empty().append(new Option('All groups','0'));Object.entries(groups).forEach(a=>$group.append(new Option(a[1],a[0])));if(groups[old])$group.val(old);
    recalc();
  });
 }
