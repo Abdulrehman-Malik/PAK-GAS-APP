@@ -36,6 +36,7 @@ $permissions = [
     ['cheques.view', 'View Cheques', 'cheques'], ['cheques.manage', 'Manage Cheques', 'cheques'],
     ['expenses.view', 'View Expenses', 'expenses'], ['expenses.create', 'Create Expenses', 'expenses'], ['expenses.void', 'Void Expenses', 'expenses'],
     ['reports.view', 'View Reports', 'reports'],
+    ['users.view', 'View Users', 'users'], ['users.manage', 'Manage Users', 'users'],
 ];
 
 foreach ($permissions as [$code, $name, $module]) {
