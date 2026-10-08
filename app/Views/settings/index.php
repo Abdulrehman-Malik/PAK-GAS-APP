@@ -30,12 +30,17 @@
                                 <input class="form-check-input pos-type" type="checkbox" name="transaction_types[]" value="EMPTY_CYLINDER_SALE" id="posEmpty" <?= in_array('EMPTY_CYLINDER_SALE', $enabledTypes, true) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="posEmpty">Empty Cylinder Sale</label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input pos-type" type="checkbox" name="transaction_types[]" value="CYLINDER_RETURN" id="posReturn" <?= in_array('CYLINDER_RETURN', $enabledTypes, true) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="posReturn">Cylinder Return</label>
+                            </div>
                         </div>
                         <div class="col-12 col-md-5">
                             <label class="form-label" for="posDefault">Default transaction type</label>
                             <select class="form-select" name="default_transaction_type" id="posDefault">
                                 <option value="GAS_SALE" <?= $defaultType === 'GAS_SALE' ? 'selected' : '' ?>>Gas Sale</option>
                                 <option value="EMPTY_CYLINDER_SALE" <?= $defaultType === 'EMPTY_CYLINDER_SALE' ? 'selected' : '' ?>>Empty Cylinder Sale</option>
+                                <option value="CYLINDER_RETURN" <?= $defaultType === 'CYLINDER_RETURN' ? 'selected' : '' ?>>Cylinder Return</option>
                             </select>
                             <div class="form-text">Only enabled types appear on the POS screen.</div>
                         </div>
