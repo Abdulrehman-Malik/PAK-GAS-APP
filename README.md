@@ -1,94 +1,118 @@
 # Pak Gas POS
 
-Custom PHP 8.1+ LPG POS, inventory and ledger application for a standard XAMPP/LAMP deployment.
+Pak Gas POS is a Composer-free PHP/MySQL LPG cylinder, gas, sales, purchase, ledger, cash and reporting application.
 
-This repository is **Composer-free at runtime**. It uses the small PSR-4-compatible loader in `bootstrap.php`, so a production server does not need Composer or a `vendor/` directory.
+## Windows / XAMPP installation
 
-## 1. Server requirements
+The project uses one canonical database file: database/schema.sql
+The schema file creates the pak_gas database, all tables, indexes, views and static seed data.
+There is no migration directory and no migration command.
 
-- PHP 8.1 or newer
-- PHP extensions: PDO, PDO_MySQL, BCMath, mbstring, fileinfo, zip, xml
-- MySQL 8.x or MariaDB 10.6+
-- Apache with `mod_rewrite` enabled
-- HTTPS recommended for production
-- The Apache document root **must be the repository `public/` directory**. Do not expose the repository root.
+### 1. Install XAMPP
 
-Check PHP modules:
+Install XAMPP with Apache, MySQL and PHP 8.1 or newer.
+Enable these PHP extensions in XAMPP php.ini when needed:
+- pdo_mysql
+- bcmath
+- mbstring
+- fileinfo
+- zip
+- xml
 
-```bash
+Restart Apache after changing php.ini.
+
+Verify from Command Prompt:
+
+```bat
 php -v
 php -m
 ```
 
-There is no Composer command in the installation procedure.
+### 2. Copy the application
 
-## 2. Manual installation without Composer
+Copy the repository to:
 
-See **[MANUAL_INSTALLATION.md](MANUAL_INSTALLATION.md)** for the complete Windows/XAMPP and Linux/LAMP procedure.
+```text
+C:\xampp\htdocs\pak-gas-app\
+```
 
-The short version is:
+Do not expose the repository root through Apache. Only the public directory should be web-accessible.
 
-1. Copy the application files to the server.
-2. Make `public/` the Apache document root.
-3. Copy `.env.example` to `.env` and configure the database and `APP_URL`.
-4. Ensure PHP has PDO/MySQL and BCMath enabled.
-5. Run `php bin/migrate.php` to create the schema and apply pending migrations.
-6. Set `SEED_ADMIN_PASSWORD` in `.env` and run `php bin/seed.php`.
-7. Open the configured application URL and change the seeded administrator password immediately.
+### 3. Create the environment file
 
-On first login-page request, the application also creates the configured database when it is missing and applies pending migrations. The configured database user therefore needs permission to create the database when using this automatic setup path.
+From Command Prompt:
 
-## 3. Database configuration
+```bat
+cd C:\xampp\htdocs\pak-gas-app
+copy .env.example .env
+```
 
-Example `.env`:
+Use this Windows/XAMPP baseline:
 
 ```dotenv
-APP_ENV=production
+APP_ENV=development
 APP_URL=http://localhost/pak-gas-app/public
-APP_NAME="Pak Gas POS"
+APP_NAME=Pak Gas POS
 TIMEZONE=Asia/Karachi
 
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_NAME=pak_gas
-DB_USER=pak_gas_app
-DB_PASS=CHANGE_THIS_STRONG_PASSWORD
+DB_USER=root
+DB_PASS=
 
 SESSION_TIMEOUT=1800
-SESSION_SECURE_COOKIE=true
+SESSION_SECURE_COOKIE=false
 
 SEED_ADMIN_USERNAME=admin
-SEED_ADMIN_PASSWORD=CHANGE_THIS_BEFORE_SEED
+SEED_ADMIN_PASSWORD=ChangeMeImmediately!
 ```
 
-Never commit `.env`.
+Change SEED_ADMIN_PASSWORD before creating the administrator.
+For a different subdirectory or tunnel URL, change only APP_URL in .env. Never hard-code the deployment URL in PHP or JavaScript.
 
-If the application is installed below a subdirectory, put that path in `APP_URL`. For example:
+### 4. Import the complete database
 
-```dotenv
-APP_URL=http://localhost/pak-gas-app/public
+Start MySQL from XAMPP Control Panel.
+
+Open Command Prompt:
+
+```bat
+cd C:\xampp\htdocs\pak-gas-app
+C:\xampp\mysql\bin\mysql.exe -u root -p < database\schema.sql
 ```
 
-Deployment URLs are read from `.env`; they must not be hard-coded into application PHP or JavaScript.
+If the XAMPP root account has no password:
 
-## 4. Apache / XAMPP deployment
+```bat
+C:\xampp\mysql\bin\mysql.exe -u root < database\schema.sql
+```
 
-Recommended XAMPP layout:
+The schema itself creates the pak_gas database.
+
+Verify the database:
+
+```bat
+C:\xampp\mysql\bin\mysql.exe -u root -p -e "USE pak_gas; SHOW TABLES;"
+```
+
+### 5. Create the administrator
+
+From the repository root:
+
+```bat
+php bin\seed.php
+```
+
+Static seed data such as roles, permissions, settings, counters, document sequences and expense categories is already in database/schema.sql.
+The seed command only creates or refreshes the environment-based administrator account and forces a password change at first login.
+
+### 6. Configure Apache
+
+Point Apache to:
 
 ```text
-C:\xampp\htdocs\pak-gas-app\
-    app\
-    bin\
-    database\
-    public\
-    storage\
-    .env
-```
-
-Configure Apache so the document root is:
-
-```text
-C:\xampp\htdocs\pak-gas-app\public
+C:/xampp/htdocs/pak-gas-app/public
 ```
 
 Example VirtualHost:
@@ -103,174 +127,85 @@ Example VirtualHost:
         Require all granted
         Options -Indexes
     </Directory>
-
-    ErrorLog "logs/pak-gas-error.log"
-    CustomLog "logs/pak-gas-access.log" combined
 </VirtualHost>
 ```
 
-Add this to the Windows hosts file:
+Add to Windows hosts file:
 
 ```text
 127.0.0.1 pak-gas.local
 ```
 
-Then open:
+Hosts file location:
 
 ```text
-http://pak-gas.local/
+C:\Windows\System32\drivers\etc\hosts
 ```
 
-Never use the repository root as the public document root.
+Restart Apache and open http://pak-gas.local/
 
-## 5. Linux / LAMP
+Do not set Apache DocumentRoot to C:/xampp/htdocs/pak-gas-app because that would expose app, database and environment files.
 
-Set the Apache VirtualHost document root to:
+### 7. Local development option
 
-```text
-/var/www/pak-gas-app/public
-```
-
-Enable rewrite:
-
-```bash
-sudo a2enmod rewrite
-sudo systemctl reload apache2
-```
-
-Ensure only required storage paths are writable by Apache:
-
-```bash
-sudo chown -R www-data:www-data storage
-sudo chmod -R u+rwX storage
-```
-
-Do not make the entire repository writable by the web server.
-
-## 6. Database migrations and seed
-
-From the repository root:
-
-```bash
-php bin/migrate.php
-php bin/seed.php
-```
-
-Migrations run in filename order and record applied filenames in the `migrations` table.
-
-**Never edit an already-applied migration.** Add a new numbered migration for schema changes.
-
-The seeded administrator is forced to change its password on first login. Use a strong temporary password in `.env`, log in, change it, and then remove or rotate the seed password.
-
-## 7. Verify the deployment
-
-Verify at least:
-
-1. Login page loads without PHP/JavaScript errors.
-2. Administrator can log in.
-3. First login requires password change.
-4. Dashboard and Settings load.
-5. Parties, Cylinder Groups, Cylinders, Rates, Opening Stock, Cash Counter, and POS load.
-6. POS transaction type is populated from the database setting.
-7. Switching transaction type refreshes the applicable cylinder list and line-item behavior.
-8. Empty Cylinder Sale shows only empty shop cylinders.
-9. Gas Sale allows gas input and optional filled-cylinder sale.
-10. Opening Stock creates the expected cylinders and movements.
-11. Cash POS posting requires an open counter session.
-12. Unauthorized routes return server-side HTTP 403.
-13. `php bin/test.php` completes successfully.
-14. Apache exposes only `public/`.
-
-## 8. Development server
-
-For development only:
-
-```bash
+```bat
+cd C:\xampp\htdocs\pak-gas-app
 php -S localhost:8080 -t public
 ```
 
-Set:
+Then set APP_URL=http://localhost:8080 in .env.
 
-```dotenv
-APP_URL=http://localhost:8080
+Composer is not required.
+
+### 8. First-run verification
+
+1. Login page opens.
+2. Admin login works.
+3. First login forces password change.
+4. Dashboard opens.
+5. Parties, Cylinder Groups, Cylinders and Rates open.
+6. Opening Stock can create cylinders and show history.
+7. POS transaction type loads from settings and changes line behavior.
+8. Sales History, Receipts, Purchases, Payments, Cheques, Expenses and Reports open.
+9. Unauthorized screens return server-side HTTP 403.
+10. Runtime checks pass:
+
+```bat
+php bin\test.php
 ```
 
-The PHP built-in server is not recommended for production.
+Expected:
 
-## 9. Production checklist
+```text
+All runtime checks passed.
+```
 
-- [ ] `APP_ENV=production`
-- [ ] Strong database password
-- [ ] Strong administrator password
-- [ ] HTTPS enabled
-- [ ] `SESSION_SECURE_COOKIE=true`
-- [ ] Apache document root is `public/`
-- [ ] `.env` is not web-accessible
-- [ ] `storage/` is not web-accessible
-- [ ] Database migrations completed
-- [ ] Administrator password changed
-- [ ] Backups configured and restore tested
-- [ ] No demo/test transactions remain
-- [ ] Local/vendor assets are present; the application does not depend on a CDN
-- [ ] `php bin/test.php` passes
+## Database structure
 
-## 10. Database backup and restore
+All database creation, table creation, indexes, views and static seed data are maintained in:
+
+```text
+database\schema.sql
+```
+
+Do not add migration scripts to this project.
+
+## Windows backup
 
 Backup:
 
-```bash
-mysqldump -u pak_gas_app -p --single-transaction --routines --triggers pak_gas > pak_gas_backup.sql
+```bat
+C:\xampp\mysql\bin\mysqldump.exe -u root -p --single-transaction --routines --triggers pak_gas > C:\backup\pak_gas_backup.sql
 ```
 
 Restore:
 
-```bash
-mysql -u pak_gas_app -p pak_gas < pak_gas_backup.sql
+```bat
+C:\xampp\mysql\bin\mysql.exe -u root -p pak_gas < C:\backup\pak_gas_backup.sql
 ```
 
-Test restores periodically.
+Always test a restore on a recovery database.
 
-## 11. Deployment updates
+## Important note
 
-Pull the latest application files and then run:
-
-```bash
-php bin/migrate.php
-php bin/test.php
-```
-
-There is no `composer install` step.
-
-Do not delete the `storage/` directory during an application update.
-
-Never manually modify production tables when a migration is required. Add and deploy a numbered migration.
-
-## 12. Current functional modules
-
-The current application includes:
-
-- Masters: Parties, Cylinder Groups, Cylinders, Rates
-- Opening Stock: manual entry, batch void, native XLSX template/import with validation
-- POS: gas sale, empty-cylinder sale, filled-cylinder sale, customer returns/exchange, cash/online/cheque payments, credit/advance handling
-- Sales History: filters, detail, CSV export and conflict-aware void
-- Receipts: manual/POS receipts, cheque posting, history, void and 80 mm thermal print
-- Purchases: gas refill and new cylinders, AUTO/MANUAL codes, paid-now posting and void conflict rules
-- Supplier Payments, Cheque Register, Expenses and Cash Counter
-- Reports: stock, sold cylinders, sales, receipts, payments, balances, held cylinders, cash and expenses
-- Users/Roles, permission matrix and Audit Log
-
-The application does not require Composer or a vendor directory at runtime. PHP BCMath and Zip are required for precise decimal processing and native XLSX support.
-
-## 12. Architecture
-
-- Controllers orchestrate HTTP requests.
-- Repositories contain SQL/data access.
-- Services contain business rules and transactional posting.
-- `StockService` is the only service allowed to change cylinder gas/location.
-- `CylinderStatus` derives FILLED/PARTIAL/EMPTY/ISSUED/SOLD.
-- `AuditService` records state-changing operations.
-- Money/rates use DECIMAL and gas uses DECIMAL(10,3); BCMath is required.
-- `public/` is the only web-exposed directory.
-- `bootstrap.php` provides the Composer-free application autoloader.
-
-See [AGENT.md](AGENT.md) for coding rules and [REQUIREMENTS.md](REQUIREMENTS.md) for functional acceptance criteria.
+database/schema.sql is the baseline database definition for new installations. It is intentionally not a migration engine. Before rebuilding an existing production database, take a full backup and validate the target schema and data separately.
