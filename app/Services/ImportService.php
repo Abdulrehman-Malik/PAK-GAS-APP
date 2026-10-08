@@ -61,62 +61,15 @@ final class ImportService
     {
         if($rows===[])throw new \InvalidArgumentException('No valid opening-stock rows to commit.');
 
-        return $this->db->transaction(function()use($rows,$userId):array{
-            $groupMap=[];
-            $prepared=[];
-            foreach($rows as $row){
-                $groupCode=strtoupper(trim((string)$row['group_code']));
-                $group=$this->db->fetchOne(
-                    'SELECT id,code,capacity_kg FROM cylinder_groups WHERE UPPER(code)=:code AND active=1 FOR UPDATE',
-                    ['code'=>$groupCode]
-                );
-                if(!$group){
-                    $this->db->execute(
-                        'INSERT INTO cylinder_groups(code,name,capacity_kg,cylinder_price,active,notes,created_by,updated_by)
-                         VALUES(:code,:name,:capacity,0,1,\'Created by opening-stock import\',:user,:user)',
-                        ['code'=>$groupCode,'name'=>$row['group_name'],'capacity'=>$row['capacity_kg'],'user'=>$userId]
-                    );
-                    $groupId=(int)$this->db->pdo()->lastInsertId();
-                    $group=$this->db->fetchOne('SELECT id,code,capacity_kg FROM cylinder_groups WHERE id=:id FOR UPDATE',['id'=>$groupId]);
-                }
-                if(bccomp((string)$group['capacity_kg'],(string)$row['capacity_kg'],3)!==0)throw new \InvalidArgumentException('Group '.$groupCode.' capacity does not match imported capacity.');
+        $batchIds=[];
+        $byDate=[];
+        foreach($rows as $row)$byDate[$row['batch_date']][]=$row;
+        foreach($byDate as $dateRows){
+            $batchIds[]=$this->stock->createOpeningBatch($dateRows,$userId,'IMPORT','Opening stock Excel import');
+        }
 
-                $customerId=null;
-                if(strtoupper((string)$row['location'])==='ISSUED'){
-                    $customer=$this->db->fetchOne(
-                        "SELECT id FROM parties WHERE party_type='CUSTOMER' AND code=:code AND active=1",
-                        ['code'=>strtoupper(trim((string)$row['customer_code']))]
-                    );
-                    if(!$customer)throw new \InvalidArgumentException('Customer '.$row['customer_code'].' not found.');
-                    $customerId=(int)$customer['id'];
-                }
-
-                $codes=(string)$row['codes'];
-                $codeList=$codes===''?[]:(preg_split('/[\s,]+/',$codes,-1,PREG_SPLIT_NO_EMPTY)?:[]);
-                $prepared[]=[
-                    'batch_date'=>$row['batch_date'],
-                    'group_id'=>(int)$group['id'],
-                    'actual_gas'=>$row['actual_gas'],
-                    'location'=>strtoupper($row['location'])==='ISSUED'?'ISSUED':'SHOP',
-                    'customer_id'=>$customerId,
-                    'condition_code'=>strtoupper($row['condition_code']),
-                    'quantity'=>(int)$row['quantity'],
-                    'code_mode'=>strtoupper($row['code_mode']),
-                    'codes'=>$codeList
-                ];
-                $groupMap[$groupCode]=(int)$group['id'];
-            }
-
-            $batchIds=[];
-            $byDate=[];
-            foreach($prepared as $row)$byDate[$row['batch_date']][]=$row;
-            foreach($byDate as $dateRows){
-                $batchIds[]=$this->stock->createOpeningBatch($dateRows,$userId,'IMPORT','Opening stock Excel import');
-            }
-
-            $this->audit->record($userId,'IMPORT','stock_batches',$batchIds[0]??null,null,['batch_ids'=>$batchIds,'rows'=>count($prepared)],null);
-            return ['batch_ids'=>$batchIds,'rows'=>count($prepared)];
-        });
+        $this->audit->record($userId,'IMPORT','stock_batches',$batchIds[0]??null,null,['batch_ids'=>$batchIds,'rows'=>count($rows)],null);
+        return ['batch_ids'=>$batchIds,'rows'=>count($rows)];
     }
 
     public function previewParties(string $path):array
