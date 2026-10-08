@@ -83,12 +83,12 @@ async function testDropdowns(page, label) {
 }
 
 async function testTabs(page, label) {
-  const tabs = page.locator('[data-bs-toggle="tab"]:visible');
+  const tabs = page.locator('[data-lpg-tab-target]:visible, [data-bs-toggle="tab"]:visible');
   const count = await tabs.count();
 
   for (let i = 0; i < count; i += 1) {
     const tab = tabs.nth(i);
-    const target = await tab.getAttribute('data-bs-target') || await tab.getAttribute('href');
+    const target = await tab.getAttribute('data-lpg-tab-target') || await tab.getAttribute('data-bs-target') || await tab.getAttribute('href');
     if (!target || !target.startsWith('#')) continue;
 
     await tab.click();
@@ -131,8 +131,18 @@ async function main() {
     page.setDefaultTimeout(5000);
     page.setDefaultNavigationTimeout(10000);
 
+  const pageErrors = [];
+  const failedRequests = [];
+
   page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
     console.error(`[browser pageerror] ${error.message}`);
+  });
+
+  page.on('response', (response) => {
+    if (response.status() >= 500 && response.url().startsWith(baseUrl)) {
+      failedRequests.push(`${response.status()} ${response.url()}`);
+    }
   });
 
   const loginResponse = await page.goto(`${baseUrl}/login`, {
@@ -167,6 +177,12 @@ async function main() {
     }
 
     await assertNoApplicationError(page, screen.label);
+    if (pageErrors.length > 0) {
+      await fail(`${screen.label}: JavaScript error(s) detected: ${pageErrors.join(' | ')}`);
+    }
+    if (failedRequests.length > 0) {
+      await fail(`${screen.label}: server error response(s): ${failedRequests.join(' | ')}`);
+    }
     await testDropdowns(page, screen.label);
     await testTabs(page, screen.label);
 
