@@ -50,7 +50,23 @@ $settingsController = new SettingsController(
     $auditService
 );
 $counterController = new CounterController(new CounterService($db), $auth, $request);
-$posController = new PosController(new PosService($db, new DocNumberService($db), new LedgerService($db), new CashService($db), new RateService($db)), new RateService($db), $db, $auth, $request, new Validator());
+$posStockService = new StockService($db, new CodeGenerator($db));
+$posController = new PosController(
+    new PosService(
+        $db,
+        new DocNumberService($db),
+        new LedgerService($db),
+        new CashService($db),
+        new RateService($db),
+        $posStockService,
+        $auditService
+    ),
+    new RateService($db),
+    $db,
+    $auth,
+    $request,
+    new Validator()
+);
 
 $router->get('/login', [$authController, 'showLogin']);
 $router->post('/login', [$authController, 'login']);
