@@ -10,13 +10,37 @@ final class CylinderRepository
 {
     public function __construct(private readonly DB $db) {}
 
-    public function paginate(string $search,int $groupId,int $limit,int $offset):array{
-        $where='1=1';$params=['limit'=>$limit,'offset'=>$offset];
-        if($search!==''){$where.=' AND (c.code LIKE :search OR c.group_name LIKE :search)';$params['search']='%'.$search.'%';}
-        if($groupId>0){$where.=' AND c.group_id=:group_id';$params['group_id']=$groupId;}
-        $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM v_cylinder_status c WHERE {$where}",$params)['c']??0);
-        return ['rows'=>$this->db->fetchAll("SELECT * FROM v_cylinder_status c WHERE {$where} ORDER BY c.active DESC,c.code LIMIT :limit OFFSET :offset",$params),'total'=>$total];
+    public function paginate(string $search,int $groupId,int $limit,int $offset):array
+    {
+        $limit=min(100,max(10,$limit));
+        $offset=max(0,$offset);
+        $where='1=1';
+        $params=[];
+
+        if($search!==''){
+            $where.=' AND (c.code LIKE :search OR c.group_name LIKE :search)';
+            $params['search']='%'.$search.'%';
+        }
+        if($groupId>0){
+            $where.=' AND c.group_id=:group_id';
+            $params['group_id']=$groupId;
+        }
+
+        $total=(int)($this->db->fetchOne(
+            "SELECT COUNT(*) c FROM v_cylinder_status c WHERE {$where}",
+            $params
+        )['c']??0);
+
+        $rows=$this->db->fetchAll(
+            "SELECT * FROM v_cylinder_status c WHERE {$where}
+             ORDER BY c.active DESC,c.code
+             LIMIT {$limit} OFFSET {$offset}",
+            $params
+        );
+
+        return ['rows'=>$rows,'total'=>$total];
     }
+
     public function find(int $id):?array{return $this->db->fetchOne('SELECT * FROM v_cylinder_status WHERE id=:id',['id'=>$id]);}
     public function rawGroup(int $id):?array{return $this->db->fetchOne('SELECT * FROM cylinder_groups WHERE id=:id',['id'=>$id]);}
     public function create(array $d):int{$this->db->execute('INSERT INTO cylinders(code,group_id,gas_kg,location,condition_code,active,notes,created_by,updated_by) VALUES(:code,:group_id,:gas_kg,"SHOP",:condition_code,1,:notes,:uid,:uid)',$d);return $this->db->lastInsertId();}
