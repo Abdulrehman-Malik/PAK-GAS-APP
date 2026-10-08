@@ -61,15 +61,75 @@ final class ImportService
     {
         if($rows===[])throw new \InvalidArgumentException('No valid opening-stock rows to commit.');
 
-        $batchIds=[];
-        $byDate=[];
-        foreach($rows as $row)$byDate[$row['batch_date']][]=$row;
-        foreach($byDate as $dateRows){
-            $batchIds[]=$this->stock->createOpeningBatch($dateRows,$userId,'IMPORT','Opening stock Excel import');
-        }
+        return $this->db->transaction(function()use($rows,$userId):array{
+            $dates=array_values(array_unique(array_map(static fn(array $row):string=>(string)$row['batch_date'],$rows)));
+            if(count($dates)!==1)throw new \InvalidArgumentException('All rows in one opening-stock import must use the same batch date.');
 
-        $this->audit->record($userId,'IMPORT','stock_batches',$batchIds[0]??null,null,['batch_ids'=>$batchIds,'rows'=>count($rows)],null);
-        return ['batch_ids'=>$batchIds,'rows'=>count($rows)];
+            $prepared=[];
+            foreach($rows as $row){
+                $groupCode=strtoupper(trim((string)$row['group_code']));
+                $group=$this->db->fetchOne(
+                    'SELECT id,code,capacity_kg FROM cylinder_groups WHERE UPPER(code)=:code AND active=1 FOR UPDATE',
+                    ['code'=>$groupCode]
+                );
+                if(!$group){
+                    $this->db->execute(
+                        "INSERT INTO cylinder_groups(code,name,capacity_kg,cylinder_price,active,notes,created_by,updated_by)
+                         VALUES(:code,:name,:capacity,0.00,1,'Created by opening-stock import',:user,:user)",
+                        [
+                            'code'=>$groupCode,'name'=>$row['group_name'],'capacity'=>$row['capacity_kg'],'user'=>$userId
+                        ]
+                    );
+                    $group=$this->db->fetchOne(
+                        'SELECT id,code,capacity_kg FROM cylinder_groups WHERE code=:code FOR UPDATE',
+                        ['code'=>$groupCode]
+                    );
+                }
+                if(!$group||bccomp((string)$group['capacity_kg'],(string)$row['capacity_kg'],3)!==0){
+                    throw new \InvalidArgumentException('Group '.$groupCode.' capacity does not match imported capacity.');
+                }
+
+                $customerId=null;
+                if(strtoupper((string)$row['location'])==='ISSUED'){
+                    $customer=$this->db->fetchOne(
+                        "SELECT id FROM parties WHERE party_type='CUSTOMER' AND code=:code AND active=1",
+                        ['code'=>strtoupper(trim((string)$row['customer_code']))]
+                    );
+                    if(!$customer)throw new \InvalidArgumentException('Customer '.$row['customer_code'].' not found.');
+                    $customerId=(int)$customer['id'];
+                }
+
+                $codes=preg_split('/[\s,]+/',trim((string)$row['codes']),-1,PREG_SPLIT_NO_EMPTY)?:[];
+
+                $prepared[]=[
+                    'batch_date'=>(string)$row['batch_date'],
+                    'group_id'=>(int)$group['id'],
+                    'actual_gas'=>(string)$row['actual_gas'],
+                    'location'=>strtoupper((string)$row['location'])==='ISSUED'?'ISSUED':'SHOP',
+                    'customer_id'=>$customerId,
+                    'condition_code'=>strtoupper((string)$row['condition_code']),
+                    'quantity'=>(int)$row['quantity'],
+                    'code_mode'=>strtoupper((string)$row['code_mode']),
+                    'codes'=>$codes
+                ];
+            }
+
+            $batchId=$this->stock->createOpeningBatch($prepared,$userId,'IMPORT','Opening stock Excel import');
+            $importId=$this->createImportRecord('OPENING_STOCK','opening-stock-import.xlsx',count($rows),count($rows),0,'COMMITTED',$userId);
+            $this->audit->record($userId,'IMPORT','stock_batches',$batchId,null,['import_id'=>$importId,'rows'=>count($rows)],null);
+
+            return ['batch_id'=>$batchId,'rows'=>count($rows),'import_id'=>$importId];
+        });
+    }
+
+    private function createImportRecord(string $type,string $filename,int $total,int $ok,int $error,string $status,int $userId):int
+    {
+        $this->db->execute(
+            'INSERT INTO import_batches(import_type,filename,rows_total,rows_ok,rows_error,status,created_by)
+             VALUES(:type,:filename,:total,:ok,:error,:status,:user)',
+            ['type'=>$type,'filename'=>$filename,'total'=>$total,'ok'=>$ok,'error'=>$error,'status'=>$status,'user'=>$userId]
+        );
+        return (int)$this->db->pdo()->lastInsertId();
     }
 
     public function previewParties(string $path):array
