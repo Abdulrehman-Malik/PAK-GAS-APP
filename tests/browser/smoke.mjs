@@ -160,7 +160,7 @@ async function main() {
   });
 
   page.on('response', (response) => {
-    if (response.status() >= 500 && response.url().startsWith(baseUrl)) {
+    if (response.status() >= 400 && response.url().startsWith(baseUrl)) {
       failedRequests.push(`${response.status()} ${response.url()}`);
     }
   });
@@ -204,6 +204,12 @@ async function main() {
     }
 
     await assertNoApplicationError(page, screen.label);
+    const uiState = await page.evaluate(() => ({
+      lpgLoaded: Boolean(window.Lpg && typeof window.Lpg.activateTab === 'function'),
+      jqueryLoaded: typeof window.jQuery === 'function',
+      bootstrapLoaded: Boolean(window.bootstrap),
+    }));
+    console.log(`UISTATE ${screen.label}: ${JSON.stringify(uiState)}`);
     if (pageErrors.length > 0) {
       await fail(`${screen.label}: JavaScript error(s) detected: ${pageErrors.join(' | ')}`);
     }
