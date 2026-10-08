@@ -40,6 +40,12 @@ use App\Controllers\PasswordController;
 use App\Services\PasswordService;
 use App\Repositories\SettingsRepository;
 use App\Services\SettingsService;
+use App\Services\UserService;
+use App\Services\ExpenseService;
+use App\Services\ChequeService;
+use App\Services\PurchaseService;
+use App\Services\PaymentService;
+use App\Services\ReceiptService;
 
 $authController = new AuthController($auth, $request, new Validator(), $session);
 $passwordService = new PasswordService($db, new AuditService($db));
