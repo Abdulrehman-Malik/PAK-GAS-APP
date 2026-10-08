@@ -61,7 +61,13 @@ final class Router
                 $this->csrf->verify($this->request);
             }
 
-            return ($route['handler'])(...array_slice($matches, 1));
+            $arguments = array_slice($matches, 1);
+            $arguments = array_map(
+                static fn (string $value): int|string => ctype_digit($value) ? (int) $value : $value,
+                $arguments
+            );
+
+            return ($route['handler'])(...$arguments);
         }
 
         return Response::html(View::errorPage('Page not found.', 404), 404);
