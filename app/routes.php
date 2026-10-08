@@ -173,6 +173,7 @@ $router->post('/sales-history/void', [$posController, 'void'], true, 'sales.void
 
 $router->get('/receipts', [$receiptController, 'index'], true, 'receipts.view');
 $router->get('/receipts/data', [$receiptController, 'data'], true, 'receipts.view');
+$router->get('/receipts/print', [$receiptController, 'print'], true, 'receipts.view');
 $router->get('/receipts/customers', [$receiptController, 'customers'], true, 'receipts.create');
 $router->post('/receipts', [$receiptController, 'store'], true, 'receipts.create');
 $router->post('/receipts/void', [$receiptController, 'void'], true, 'receipts.void');
