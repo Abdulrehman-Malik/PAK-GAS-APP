@@ -32,12 +32,12 @@ final class SettingsController
         try {
             $this->settings->updatePosSettings($types, (string) ($input['default_transaction_type'] ?? ''));
             $user = $this->auth->user();
-            $this->audit->write((int) $user['id'], 'UPDATE', 'settings', null, null, [
+            $this->audit->record((int) $user['id'], 'UPDATE', 'settings', null, null, [
                 'setting_group' => 'sales',
                 'setting_key' => 'pos_transaction_types',
                 'transaction_types' => $types,
                 'default_transaction_type' => (string) ($input['default_transaction_type'] ?? ''),
-            ]);
+            ], null);
             return Response::redirect(url('/settings'));
         } catch (\Throwable $e) {
             return Response::json(['ok' => false, 'message' => $e->getMessage()], 422);
