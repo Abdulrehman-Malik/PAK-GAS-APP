@@ -63,11 +63,22 @@ jobs:
         shell: bash
         run: |
           set -e
-          export TEST_DB_HOST=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pak-gas-schema-test)
+          docker run -d --name pak-gas-installer-test -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
+          trap 'docker rm -f pak-gas-installer-test >/dev/null 2>&1 || true; rm -f .env database/migrations/999_ci_installer_smoke.sql' EXIT
+
+          for i in {1..30}; do
+            if docker exec pak-gas-installer-test mariadb-admin ping -h 127.0.0.1 -uroot -proot --silent >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+
+          export TEST_DB_HOST=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pak-gas-installer-test)
           export TEST_DB_PORT=3306
           export TEST_DB_NAME=pak_gas_installer_test
           export TEST_DB_USER=root
           export TEST_DB_PASS=root
+
           cat > .env <<'ENV'
           APP_ENV=test
           APP_URL=http://localhost
@@ -81,6 +92,6 @@ jobs:
           SEED_ADMIN_USERNAME=ci_admin
           SEED_ADMIN_PASSWORD=CiInstallerPassword123!
           ENV
-          trap 'rm -f .env database/migrations/999_ci_installer_smoke.sql' EXIT
+
           php bin/test-installer.php
-          docker exec pak-gas-schema-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas_installer_test; SHOW TABLES LIKE 'ci_installer_smoke'; SELECT migration FROM schema_migrations WHERE migration='999_ci_installer_smoke.sql';"
+          docker exec pak-gas-installer-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas_installer_test; SHOW TABLES LIKE 'ci_installer_smoke'; SELECT migration FROM schema_migrations WHERE migration='999_ci_installer_smoke.sql';"
