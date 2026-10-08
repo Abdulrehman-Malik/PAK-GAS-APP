@@ -68,8 +68,12 @@ final class PosService
 
             $issue = '0.00';
             $sold = '0.00';
+            $soldGas = '0.00';
             $returned = '0.00';
             $saleLines = [];
+            $rateEditSetting = $this->db->fetchOne("SELECT setting_value FROM settings WHERE setting_group='sales_credit' AND setting_key='rate_edit'");
+            $rateEditAllowed = filter_var((string)($rateEditSetting['setting_value'] ?? '1'), FILTER_VALIDATE_BOOL);
+
 
             foreach ($lines as $line) {
                 if (!is_array($line)) {
@@ -128,11 +132,17 @@ final class PosService
                     $cprice = '0.00';
                 } else {
                     $resolved = $this->rates->resolve((int) $cylinder['group_id'], $date);
+                    $resolvedRate = (string) $resolved['gas_rate'];
+                    $resolvedCylinderPrice = (string) $resolved['cylinder_price'];
                     if (bccomp($rate, '0.00', 2) <= 0) {
-                        $rate = (string) $resolved['gas_rate'];
+                        $rate = $resolvedRate;
+                    } elseif (!$rateEditAllowed && bccomp($rate, $resolvedRate, 2) !== 0) {
+                        throw new \\InvalidArgumentException('Rate editing is disabled for POS.');
                     }
                     if (bccomp($cprice, '0.00', 2) <= 0) {
-                        $cprice = (string) $resolved['cylinder_price'];
+                        $cprice = $resolvedCylinderPrice;
+                    } elseif (!$rateEditAllowed && bccomp($cprice, $resolvedCylinderPrice, 2) !== 0) {
+                        throw new \\InvalidArgumentException('Cylinder price editing is disabled for POS.');
                     }
 
                     if (bccomp($gas, '0.000', 3) < 0 || bccomp($gas, $capacity, 3) > 0) {
@@ -167,8 +177,10 @@ final class PosService
                         if (bccomp($rate, '0.00', 2) <= 0 || bccomp($cprice, '0.00', 2) <= 0) {
                             throw new \InvalidArgumentException('Gas rate and cylinder price must be greater than zero.');
                         }
-                        $amount = bcadd(bcmul($gas, $rate, 2), $cprice, 2);
+                        $gasAmount = bcmul($gas, $rate, 2);
+                        $amount = bcadd($gasAmount, $cprice, 2);
                         $sold = bcadd($sold, $amount, 2);
+                        $soldGas = bcadd($soldGas, $gasAmount, 2);
                         $to = 'SOLD';
                         $after = '0.000';
                     } elseif ($type === 'SELL_EMPTY') {
@@ -203,15 +215,28 @@ final class PosService
                 ];
             }
 
-            $net = bcsub(bcadd($issue, $sold, 2), $returned, 2);
+            $taxSetting = $this->db->fetchOne("SELECT setting_value FROM settings WHERE setting_group='tax' AND setting_key='enabled'");
+            $taxEnabled = filter_var((string)($taxSetting['setting_value'] ?? '0'), FILTER_VALIDATE_BOOL);
+            $taxRateRow = $this->db->fetchOne("SELECT setting_value FROM settings WHERE setting_group='tax' AND setting_key='rate_percent'");
+            $taxRate = (string)($taxRateRow['setting_value'] ?? '0.00');
+            $taxBase = bcadd($issue, $soldGas, 2);
+            $tax = $taxEnabled ? bcdiv(bcmul($taxBase, $taxRate, 4), '100.00', 2) : '0.00';
+            $net = bcadd(bcsub(bcadd($issue, $sold, 2), $returned, 2), $tax, 2);
             $oldBalance = $this->ledger->balance($customerId);
             $newBalance = bcadd($oldBalance, bcsub($net, $received, 2), 2);
 
             $creditSetting = $this->db->fetchOne(
                 "SELECT setting_value FROM settings
-                 WHERE setting_group = 'sales_credit' AND setting_key = 'credit_enforcement'"
+                 WHERE setting_group = 'sales_credit' AND setting_key IN ('credit_limit_enforcement','credit_enforcement')
+                 ORDER BY setting_key = 'credit_limit_enforcement' DESC LIMIT 1"
             );
             $enforcement = strtoupper((string) ($creditSetting['setting_value'] ?? 'BLOCK'));
+
+            $advanceSetting = $this->db->fetchOne("SELECT setting_value FROM settings WHERE setting_group='sales_credit' AND setting_key='allow_advance'");
+            $allowAdvance = filter_var((string)($advanceSetting['setting_value'] ?? '1'), FILTER_VALIDATE_BOOL);
+            if (!$allowAdvance && bccomp($newBalance, '0.00', 2) < 0) {
+                throw new \\InvalidArgumentException('Advance balance is disabled for this shop.');
+            }
 
             if ($enforcement === 'BLOCK' && bccomp($newBalance, '0.00', 2) > 0) {
                 $allowCredit = (int) $party['allow_credit'];
@@ -231,8 +256,8 @@ final class PosService
             $this->db->execute(
                 'INSERT INTO sales
                  (doc_no, txn_date, customer_id, counter_id, issue_total, cylinder_sale_total, return_total,
-                  net_amount, received_amount, balance_after, created_by)
-                 VALUES (:doc, :date, :customer, :counter, :issue, :sold, :returned, :net, :received, :balance, :user)',
+                  tax_amount, net_amount, received_amount, balance_after, created_by)
+                 VALUES (:doc, :date, :customer, :counter, :issue, :sold, :returned, :tax, :net, :received, :balance, :user)',
                 [
                     'doc' => $doc,
                     'date' => $date,
@@ -241,6 +266,7 @@ final class PosService
                     'issue' => $issue,
                     'sold' => $sold,
                     'returned' => $returned,
+                    'tax' => $tax,
                     'net' => $net,
                     'received' => $received,
                     'balance' => $newBalance,
@@ -308,7 +334,41 @@ final class PosService
                     ]
                 );
                 $receiptId = $this->db->lastInsertId();
-                $this->ledger->post($customerId, $date, 'RECEIPT', $receiptId, '0.00', $received, 'Receipt ' . $receipt, $userId);
+
+                $postingModeRow = $this->db->fetchOne(
+                    "SELECT setting_key, setting_value FROM settings
+                     WHERE setting_group='cheques' AND setting_key IN ('cheque_ledger_posting','posting_mode')
+                     ORDER BY setting_key='cheque_ledger_posting' DESC LIMIT 1"
+                );
+                $postingMode = strtoupper((string)($postingModeRow['setting_value'] ?? 'ON_CLEARANCE'));
+
+                if ($method === 'CHEQUE') {
+                    $cheque = $input['cheque'] ?? [];
+                    $chequeNo = trim((string)($cheque['cheque_no'] ?? ''));
+                    $chequeDate = (string)($cheque['cheque_date'] ?? '');
+                    if ($chequeNo === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $chequeDate)) {
+                        throw new \\InvalidArgumentException('Cheque number and cheque date are required.');
+                    }
+                    $this->db->execute(
+                        'INSERT INTO cheques
+                         (direction, party_id, cheque_no, bank, cheque_date, amount, status, receipt_id, created_by)
+                         VALUES (\'IN\', :party, :no, :bank, :date, :amount, :status, :receipt, :user)',
+                        [
+                            'party' => $customerId,
+                            'no' => strtoupper($chequeNo),
+                            'bank' => trim((string)($cheque['bank'] ?? '')),
+                            'date' => $chequeDate,
+                            'amount' => $received,
+                            'status' => $postingMode === 'ON_CLEARANCE' ? 'PENDING' : 'CLEARED',
+                            'receipt' => $receiptId,
+                            'user' => $userId,
+                        ]
+                    );
+                }
+
+                if ($method !== 'CHEQUE' || $postingMode !== 'ON_CLEARANCE') {
+                    $this->ledger->post($customerId, $date, 'RECEIPT', $receiptId, '0.00', $received, 'Receipt ' . $receipt, $userId);
+                }
                 if ($method === 'CASH') {
                     $this->cash->post($counterId, $date, 'IN', $received, 'RECEIPT', $receiptId, $userId);
                 }
@@ -320,7 +380,8 @@ final class PosService
                 'sales',
                 $saleId,
                 null,
-                ['doc_no' => $doc, 'net_amount' => $net, 'received_amount' => $received],
+                ['doc_no' => $doc, 'net_amount' => $net,
+                'tax_amount' => $tax, 'received_amount' => $received],
                 null
             );
 
