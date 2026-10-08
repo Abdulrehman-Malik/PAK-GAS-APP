@@ -423,24 +423,30 @@ final class PosService
 
             foreach ($lines as $line) {
                 $later = $this->db->fetchOne(
-                    'SELECT m.id, m.movement_type
+                    "SELECT m.id, m.movement_type, m.source_document_type, m.source_document_id,
+                            CASE
+                                WHEN m.source_document_type='SALE' THEN (SELECT doc_no FROM sales WHERE id=m.source_document_id)
+                                WHEN m.source_document_type='PURCHASE' THEN (SELECT doc_no FROM purchases WHERE id=m.source_document_id)
+                                ELSE CAST(m.source_document_id AS CHAR)
+                            END AS source_doc_no
                      FROM cylinder_movements m
                      WHERE m.cylinder_id = :cylinder
                        AND m.id > (
                            SELECT MAX(m2.id)
                            FROM cylinder_movements m2
-                           WHERE m2.source_document_type = \'SALE\'
-                             AND m2.source_document_id = :sale
-                             AND m2.cylinder_id = :cylinder2
+                           WHERE m2.source_document_type='SALE'
+                             AND m2.source_document_id=:sale
+                             AND m2.cylinder_id=:cylinder2
                        )
                      ORDER BY m.id
-                     LIMIT 1',
+                     LIMIT 1",
                     ['cylinder' => $line['cylinder_id'], 'sale' => $saleId, 'cylinder2' => $line['cylinder_id']]
                 );
                 if ($later) {
                     throw new \InvalidArgumentException(
                         'Cannot void sale: cylinder ' . $line['code'] .
-                        ' has a later ' . $later['movement_type'] . ' movement.'
+                        ' has later ' . $later['movement_type'] .
+                        ($later['source_doc_no'] ? ' document ' . $later['source_doc_no'] : '') . '.'
                     );
                 }
             }
@@ -493,16 +499,27 @@ final class PosService
                 ['sale' => $saleId]
             );
             foreach ($receipts as $receipt) {
-                foreach ($this->ledger->entriesForDocument('RECEIPT', (int) $receipt['id']) as $entry) {
-                    $this->ledger->reverseEntry(
-                        $entry,
-                        (string) $receipt['receipt_date'],
-                        $userId,
-                        'Void POS receipt ' . $receipt['doc_no']
+                $cheque = $this->db->fetchOne(
+                    'SELECT * FROM cheques WHERE receipt_id=:receipt ORDER BY id DESC LIMIT 1 FOR UPDATE',
+                    ['receipt' => $receipt['id']]
+                );
+                if ($cheque && $cheque['status'] === 'PENDING') {
+                    $this->db->execute(
+                        'UPDATE cheques SET status=\'BOUNCED\', bounced_reason=:reason WHERE id=:id',
+                        ['reason' => 'POS sale void', 'id' => $cheque['id']]
                     );
-                }
-                if ($receipt['method'] === 'CASH') {
-                    $this->cash->reverseDocument('RECEIPT', (int) $receipt['id'], (string) $receipt['receipt_date'], $userId);
+                } else {
+                    foreach ($this->ledger->entriesForDocument('RECEIPT', (int) $receipt['id']) as $entry) {
+                        $this->ledger->reverseEntry(
+                            $entry,
+                            (string) $receipt['receipt_date'],
+                            $userId,
+                            'Void POS receipt ' . $receipt['doc_no']
+                        );
+                    }
+                    if ($receipt['method'] === 'CASH') {
+                        $this->cash->reverseDocument('RECEIPT', (int) $receipt['id'], (string) $receipt['receipt_date'], $userId);
+                    }
                 }
                 $this->db->execute(
                     'UPDATE receipts SET status = \'VOID\' WHERE id = :id',
