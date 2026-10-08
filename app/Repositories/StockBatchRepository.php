@@ -12,6 +12,8 @@ final class StockBatchRepository {
   $rows=$this->db->fetchAll("SELECT b.*,u.full_name created_by_name,(SELECT COUNT(*) FROM cylinder_movements m WHERE m.stock_batch_id=b.id) cylinder_count FROM stock_batches b LEFT JOIN users u ON u.id=b.created_by WHERE {$where} ORDER BY b.id DESC LIMIT :limit OFFSET :offset",$p);
   return ['rows'=>$rows,'total'=>$total];
  }
+ public function groups():array{return $this->db->fetchAll('SELECT id,code,name,capacity_kg FROM cylinder_groups WHERE active=1 ORDER BY code');}
+ public function customers(string $q):array{return $this->db->fetchAll("SELECT id,code,name FROM parties WHERE party_type='CUSTOMER' AND active=1 AND (code LIKE :q OR name LIKE :q OR phone LIKE :q) ORDER BY name LIMIT 30",['q'=>'%'.$q.'%']);}
  public function find(int $id):?array{return $this->db->fetchOne('SELECT * FROM stock_batches WHERE id=:id',['id'=>$id]);}
  public function cylinders(int $batchId):array{return $this->db->fetchAll('SELECT m.cylinder_id,c.code,m.to_location,m.after_gas_kg FROM cylinder_movements m JOIN cylinders c ON c.id=m.cylinder_id WHERE m.stock_batch_id=:id AND m.movement_type=\'OPENING\'',['id'=>$batchId]);}
 }
