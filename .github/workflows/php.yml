@@ -30,3 +30,18 @@ jobs:
 
       - name: Runtime unit checks
         run: php bin/test.php
+
+      - name: Schema smoke test
+        shell: bash
+        run: |
+          set -e
+          docker run -d --name pak-gas-schema-test -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
+          trap 'docker rm -f pak-gas-schema-test >/dev/null 2>&1 || true' EXIT
+          for i in {1..30}; do
+            if docker exec pak-gas-schema-test mariadb-admin ping -uroot -proot --silent >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec -i pak-gas-schema-test mariadb -uroot -proot < database/schema.sql
+          docker exec pak-gas-schema-test mariadb -uroot -proot -e "USE pak_gas; SELECT COUNT(*) AS tables_count FROM information_schema.tables WHERE table_schema='pak_gas' AND table_type='BASE TABLE'; SELECT COUNT(*) AS permission_count FROM permissions; SELECT COUNT(*) AS settings_count FROM settings; SELECT COUNT(*) AS view_count FROM information_schema.views WHERE table_schema='pak_gas';"
