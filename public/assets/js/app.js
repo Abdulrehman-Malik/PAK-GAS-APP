@@ -12,33 +12,39 @@ $(function(){
 
     function activateTab(tab){
         const target=tab.getAttribute('data-bs-target')||tab.getAttribute('href');
-        if(!target||!target.startsWith('#')){return;}
-
-        if(window.bootstrap && window.bootstrap.Tab){
-            window.bootstrap.Tab.getOrCreateInstance(tab).show();
-            return;
-        }
+        if(!target||!target.startsWith('#')){return false;}
 
         const container=tab.closest('[role="tablist"]');
         const scope=container ? container.parentElement : document;
         const tabs=scope.querySelectorAll('[data-bs-toggle="tab"]');
+
         tabs.forEach(function(item){
             const itemTarget=item.getAttribute('data-bs-target')||item.getAttribute('href');
             const active=item===tab;
             item.classList.toggle('active',active);
             item.setAttribute('aria-selected',active?'true':'false');
+            item.setAttribute('tabindex',active?'0':'-1');
+
+            if(itemTarget && itemTarget.startsWith('#')){
+                const pane=scope.querySelector(itemTarget);
+                if(pane){
+                    const paneActive=item===tab;
+                    pane.classList.toggle('show',paneActive);
+                    pane.classList.toggle('active',paneActive);
+                    pane.setAttribute('aria-hidden',paneActive?'false':'true');
+                }
+            }
         });
 
-        scope.querySelectorAll('.tab-pane').forEach(function(pane){
-            const active='#'+pane.id===target;
-            pane.classList.toggle('show',active);
-            pane.classList.toggle('active',active);
-        });
+        return true;
     }
 
-    $(document).on('click','[data-bs-toggle="tab"]',function(event){
-        event.preventDefault();
-        activateTab(this);
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab){
+        tab.addEventListener('click',function(event){
+            event.preventDefault();
+            event.stopPropagation();
+            activateTab(this);
+        },true);
     });
 
     const storageKey='pak-gas-sidebar-collapsed';
