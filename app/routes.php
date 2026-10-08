@@ -220,4 +220,6 @@ $router->get('/users', [$userController, 'index'], true, 'users.view');
 $router->get('/users/data', [$userController, 'data'], true, 'users.view');
 $router->post('/users', [$userController, 'store'], true, 'users.manage');
 $router->post('/users/permissions', [$userController, 'permissions'], true, 'users.manage');
+$router->post('/users/deactivate', [$userController, 'deactivate'], true, 'users.manage');
+$router->post('/users/activate', [$userController, 'activate'], true, 'users.manage');
 $router->get('/users/role-permissions', [$userController, 'rolePermissions'], true, 'users.view');
