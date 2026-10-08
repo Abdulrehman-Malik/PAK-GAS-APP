@@ -21,6 +21,20 @@ final class ReceiptController
         ]);
     }
 
+    public function print(): Response
+    {
+        try{
+            $q=$this->request->query();
+            $data=$this->service->printData(
+                (int)($q['id']??0),
+                (int)($q['sale_id']??0)
+            );
+            return View::render('receipts/print',['pageTitle'=>'Receipt','data'=>$data,'user'=>$this->auth->user(),'_base_path'=>base_path()],'print');
+        }catch(\Throwable $e){
+            return Response::html(View::errorPage($e->getMessage(),422),422);
+        }
+    }
+
     public function data(): Response
     {
         $q=$this->request->query();
