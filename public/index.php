@@ -9,7 +9,6 @@ use App\Core\Config;
 use App\Core\Csrf;
 use App\Core\DB;
 use App\Core\Logger;
-use App\Services\MigrationService;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
@@ -27,13 +26,6 @@ try {
     $csrf = new Csrf($session);
     $auth = new Auth($db, $session, $config);
     $request = new Request();
-
-    // The login page is the application bootstrap/setup checkpoint. Once DB connectivity
-    // is established, create the configured database (if missing) and apply only pending
-    // migrations before rendering the login page.
-    if ($request->method() === 'GET' && $request->path() === '/login') {
-        (new MigrationService($db, dirname(__DIR__)))->run();
-    }
 
     $GLOBALS['session'] = $session;
     $GLOBALS['csrf'] = $csrf;
