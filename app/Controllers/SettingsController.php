@@ -21,6 +21,19 @@ final class SettingsController
     ) {
     }
 
+    public function updateGroup(): Response
+    {
+        $input=$this->request->input();
+        $group=trim((string)($input['setting_group']??''));
+        unset($input['setting_group']);
+        try{
+            $this->settings->updateFields($group,$input);
+            $user=$this->auth->user();
+            $this->audit->record((int)$user['id'],'UPDATE','settings',null,null,['group'=>$group,'values'=>$input],$this->request->ip());
+            return Response::redirect(url('/settings'));
+        }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
+    }
+
     public function updatePos(): Response
     {
         $input = $this->request->input();
@@ -37,7 +50,7 @@ final class SettingsController
                 'setting_key' => 'pos_transaction_types',
                 'transaction_types' => $types,
                 'default_transaction_type' => (string) ($input['default_transaction_type'] ?? ''),
-            ], null);
+            ], $this->request->ip());
             return Response::redirect(url('/settings'));
         } catch (\Throwable $e) {
             return Response::json(['ok' => false, 'message' => $e->getMessage()], 422);
