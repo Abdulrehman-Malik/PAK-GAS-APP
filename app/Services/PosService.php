@@ -199,7 +199,7 @@ final class PosService
                     $line['type']==='RETURN'?'RETURN':($line['type']==='ISSUE'?'ISSUE':'SALE_OUT'),
                     $line['to'],
                     $line['after'],
-                    $line['to']==='CUSTOMER'?$customerId:null,
+                    $customerId,
                     $line['rate'],
                     'SALE',
                     $saleId,
