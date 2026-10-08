@@ -165,7 +165,7 @@ final class PurchaseService
             }
 
             $postingMode = strtoupper((string) (($this->db->fetchOne(
-                "SELECT setting_value FROM settings WHERE setting_group='cheques' AND setting_key='posting_mode'"
+                "SELECT setting_value FROM settings WHERE setting_group='cheques' AND setting_key IN ('cheque_ledger_posting','posting_mode') ORDER BY setting_key='cheque_ledger_posting' DESC LIMIT 1"
             )['setting_value'] ?? 'ON_CLEARANCE')));
             $postedPaid = ($method === 'CHEQUE' && $postingMode === 'ON_CLEARANCE') ? '0.00' : $paid;
 
@@ -176,7 +176,7 @@ final class PurchaseService
             $this->db->execute(
                 'INSERT INTO purchases
                  (doc_no, supplier_id, supplier_invoice_no, purchase_date, total, paid_amount, balance_after, status, notes, created_by)
-                 VALUES (:doc, :supplier, :invoice, :date, :total, :paid, :balance, 'POSTED', :notes, :user)',
+                 VALUES (:doc, :supplier, :invoice, :date, :total, :paid, :balance, \'POSTED\', :notes, :user)',
                 [
                     'doc' => $doc,
                     'supplier' => $supplierId,
@@ -242,7 +242,7 @@ final class PurchaseService
                 $this->db->execute(
                     'INSERT INTO payments
                      (doc_no, payment_date, party_id, amount, method, counter_id, source, purchase_id, status, narration, created_by)
-                     VALUES (:doc, :date, :party, :amount, :method, :counter, 'PURCHASE', :purchase, 'POSTED', :narration, :user)',
+                     VALUES (:doc, :date, :party, :amount, :method, :counter, \'PURCHASE\', :purchase, \'POSTED\', :narration, :user)',
                     [
                         'doc' => $paymentDoc,
                         'date' => $date,
@@ -265,12 +265,12 @@ final class PurchaseService
                         throw new \InvalidArgumentException('Cheque number and date are required.');
                     }
                     $postingMode = strtoupper((string) (($this->db->fetchOne(
-                        "SELECT setting_value FROM settings WHERE setting_group='cheques' AND setting_key='posting_mode'"
+                        "SELECT setting_value FROM settings WHERE setting_group='cheques' AND setting_key IN ('cheque_ledger_posting','posting_mode') ORDER BY setting_key='cheque_ledger_posting' DESC LIMIT 1"
                     )['setting_value'] ?? 'ON_CLEARANCE')));
                     $this->db->execute(
                         'INSERT INTO cheques
                          (direction, party_id, cheque_no, bank, cheque_date, amount, status, payment_id, created_by)
-                         VALUES ('OUT', :party, :no, :bank, :date, :amount, :status, :payment, :user)',
+                         VALUES (\'OUT\', :party, :no, :bank, :date, :amount, :status, :payment, :user)',
                         [
                             'party' => $supplierId,
                             'no' => strtoupper($chequeNo),
@@ -317,7 +317,7 @@ final class PurchaseService
             $movements = $this->db->fetchAll(
                 'SELECT m.*, c.code FROM cylinder_movements m
                  INNER JOIN cylinders c ON c.id=m.cylinder_id
-                 WHERE m.source_document_type='PURCHASE' AND m.source_document_id=:purchase
+                 WHERE m.source_document_type=\'PURCHASE\' AND m.source_document_id=:purchase
                  ORDER BY m.id FOR UPDATE',
                 ['purchase'=>$purchaseId]
             );
@@ -358,7 +358,7 @@ final class PurchaseService
             }
 
             $payments = $this->db->fetchAll(
-                'SELECT * FROM payments WHERE purchase_id=:purchase AND status='POSTED' FOR UPDATE',
+                'SELECT * FROM payments WHERE purchase_id=:purchase AND status=\'POSTED\' FOR UPDATE',
                 ['purchase'=>$purchaseId]
             );
             foreach ($payments as $payment) {
@@ -370,13 +370,13 @@ final class PurchaseService
                     $this->cash->reverseDocument('PAYMENT',(int)$payment['id'],(string)$payment['payment_date'],$userId);
                 }
                 if ($cheque && $cheque['status']==='PENDING') {
-                    $this->db->execute('UPDATE cheques SET status='BOUNCED',bounced_reason=:reason WHERE id=:id',['reason'=>'Purchase void: '.$reason,'id'=>$cheque['id']]);
+                    $this->db->execute('UPDATE cheques SET status=\'BOUNCED\',bounced_reason=:reason WHERE id=:id',['reason'=>'Purchase void: '.$reason,'id'=>$cheque['id']]);
                 }
-                $this->db->execute('UPDATE payments SET status='VOID' WHERE id=:id',['id'=>$payment['id']]);
+                $this->db->execute('UPDATE payments SET status=\'VOID\' WHERE id=:id',['id'=>$payment['id']]);
             }
 
             $this->db->execute(
-                'UPDATE purchases SET status='VOID',void_reason=:reason,voided_at=NOW(),voided_by=:user WHERE id=:id',
+                'UPDATE purchases SET status=\'VOID\',void_reason=:reason,voided_at=NOW(),voided_by=:user WHERE id=:id',
                 ['reason'=>$reason,'user'=>$userId,'id'=>$purchaseId]
             );
             $this->audit->record($userId,'VOID','purchases',$purchaseId,['status'=>'POSTED'],['status'=>'VOID','reason'=>$reason],null);
