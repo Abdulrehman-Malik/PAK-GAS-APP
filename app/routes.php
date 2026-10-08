@@ -148,6 +148,7 @@ $router->post('/sales/{id}/void', [$salesController, 'void'], true, 'sales.void'
 
 $router->get('/receipts', [$receiptController, 'index'], true, 'receipts.view');
 $router->get('/receipts/data', [$receiptController, 'data'], true, 'receipts.view');
+$router->get('/receipts/{id}/print', [$receiptController, 'print'], true, 'receipts.view');
 $router->post('/receipts', [$receiptController, 'store'], true, 'receipts.create');
 $router->post('/receipts/{id}/void', [$receiptController, 'void'], true, 'receipts.void');
 
