@@ -23,6 +23,10 @@ final class ImportService
         if(strtolower(pathinfo($name,PATHINFO_EXTENSION))!=='xlsx')throw new \InvalidArgumentException('Only XLSX files are supported.');
         $tmp=(string)($file['tmp_name']??'');
         if(!is_uploaded_file($tmp)&&PHP_SAPI!=='cli')throw new \InvalidArgumentException('Invalid uploaded file.');
+        if((int)($file['size']??0)>10*1024*1024)throw new \InvalidArgumentException('Import file must be 10 MB or smaller.');
+        $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($tmp);
+        $allowed=['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/zip','application/octet-stream'];
+        if($mime===false||!in_array($mime,$allowed,true))throw new \InvalidArgumentException('The uploaded file is not a valid XLSX file.');
 
         $targetDir=base_path('storage/imports');
         if(!is_dir($targetDir)&&!mkdir($targetDir,0775,true)&&!is_dir($targetDir))throw new \RuntimeException('Unable to create import storage.');
@@ -181,7 +185,8 @@ final class ImportService
                 $id=(int)$this->db->pdo()->lastInsertId();
                 $this->audit->record($userId,'IMPORT','parties',$id,null,$row,null);
             }
-            return ['rows'=>count($rows)];
+            $importId=$this->createImportRecord('PARTIES','parties-import.xlsx',count($rows),count($rows),0,'COMMITTED',$userId);
+            return ['rows'=>count($rows),'import_id'=>$importId];
         });
     }
 
