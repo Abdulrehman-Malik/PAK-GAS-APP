@@ -4,52 +4,46 @@ Pak Gas POS is a Composer-free PHP/MySQL LPG cylinder, gas, sales, purchase, led
 
 ## Windows / XAMPP installation
 
-The project uses one canonical database file: database/schema.sql
-The schema file creates the pak_gas database, all tables, indexes, views and static seed data.
-There is no migration directory and no migration command.
+Installation is now web-based. You do not need to import SQL files or run seed commands manually.
 
 ### 1. Install XAMPP
 
 Install XAMPP with Apache, MySQL and PHP 8.1 or newer.
-Enable these PHP extensions in XAMPP php.ini when needed:
-- pdo_mysql
-- bcmath
+
+The installer checks these mandatory PHP requirements automatically:
+
+- PDO
+- PDO MySQL
+- BCMath
 - mbstring
 - fileinfo
 - zip
 - xml
 
-Restart Apache after changing php.ini.
-
-Verify from Command Prompt:
-
-```bat
-php -v
-php -m
-```
+If any requirement is missing, the Installation page shows exactly what must be enabled. After changing XAMPP's php.ini, restart Apache and refresh the Installation page.
 
 ### 2. Copy the application
 
 Copy the repository to:
 
-```text
+~~~text
 C:\xampp\htdocs\pak-gas-app\
-```
+~~~
 
-Do not expose the repository root through Apache. Only the public directory should be web-accessible.
+Only the public directory should be exposed by Apache.
 
-### 3. Create the environment file
+### 3. Create .env
 
 From Command Prompt:
 
-```bat
+~~~bat
 cd C:\xampp\htdocs\pak-gas-app
 copy .env.example .env
-```
+~~~
 
-Use this Windows/XAMPP baseline:
+Set your database and administrator values in .env:
 
-```dotenv
+~~~dotenv
 APP_ENV=development
 APP_URL=http://localhost/pak-gas-app/public
 APP_NAME=Pak Gas POS
@@ -66,58 +60,54 @@ SESSION_SECURE_COOKIE=false
 
 SEED_ADMIN_USERNAME=admin
 SEED_ADMIN_PASSWORD=ChangeMeImmediately!
-```
+~~~
 
-Change SEED_ADMIN_PASSWORD before creating the administrator.
-For a different subdirectory or tunnel URL, change only APP_URL in .env. Never hard-code the deployment URL in PHP or JavaScript.
+Change SEED_ADMIN_PASSWORD before installation.
 
-### 4. Import the complete database
+Deployment URLs must be changed only through APP_URL in .env. Do not hard-code URLs in PHP or JavaScript.
 
-Start MySQL from XAMPP Control Panel.
+### 4. Start Apache and MySQL
 
-Open Command Prompt:
+Open XAMPP Control Panel and start Apache and MySQL.
 
-```bat
-cd C:\xampp\htdocs\pak-gas-app
-C:\xampp\mysql\bin\mysql.exe -u root -p < database\schema.sql
-```
+### 5. Open the application
 
-If the XAMPP root account has no password:
+Open:
 
-```bat
-C:\xampp\mysql\bin\mysql.exe -u root < database\schema.sql
-```
+~~~text
+http://localhost/pak-gas-app/public/
+~~~
 
-The schema itself creates the pak_gas database.
+The application automatically sends the first request to:
 
-Verify the database:
+~~~text
+/install
+~~~
 
-```bat
-C:\xampp\mysql\bin\mysql.exe -u root -p -e "USE pak_gas; SHOW TABLES;"
-```
+The Installation page will:
 
-### 5. Create the administrator
+1. Check PHP version and mandatory extensions.
+2. Read DB_HOST, DB_PORT, DB_NAME, DB_USER and DB_PASS from .env.
+3. Create the configured database if it does not exist.
+4. Import the complete database/schema.sql baseline.
+5. Create/verify the migration tracking table.
+6. Run any new numbered SQL migrations found in database/migrations/.
+7. Create/refresh the Administrator using SEED_ADMIN_USERNAME and SEED_ADMIN_PASSWORD from .env.
+8. Redirect to the Login page after success.
 
-From the repository root:
+No MySQL command line, phpMyAdmin import, or bin\seed.php command is required for normal installation.
 
-```bat
-php bin\seed.php
-```
-
-Static seed data such as roles, permissions, settings, counters, document sequences and expense categories is already in database/schema.sql.
-The seed command only creates or refreshes the environment-based administrator account and forces a password change at first login.
-
-### 6. Configure Apache
+### 6. Configure Apache correctly
 
 Point Apache to:
 
-```text
+~~~text
 C:/xampp/htdocs/pak-gas-app/public
-```
+~~~
 
 Example VirtualHost:
 
-```apache
+~~~apache
 <VirtualHost *:80>
     ServerName pak-gas.local
     DocumentRoot "C:/xampp/htdocs/pak-gas-app/public"
@@ -128,84 +118,113 @@ Example VirtualHost:
         Options -Indexes
     </Directory>
 </VirtualHost>
-```
+~~~
 
-Add to Windows hosts file:
+Add to:
 
-```text
-127.0.0.1 pak-gas.local
-```
-
-Hosts file location:
-
-```text
+~~~text
 C:\Windows\System32\drivers\etc\hosts
-```
+~~~
 
-Restart Apache and open http://pak-gas.local/
+~~~text
+127.0.0.1 pak-gas.local
+~~~
 
-Do not set Apache DocumentRoot to C:/xampp/htdocs/pak-gas-app because that would expose app, database and environment files.
+Then open:
 
-### 7. Local development option
+~~~text
+http://pak-gas.local/
+~~~
 
-```bat
+Do not use C:\xampp\htdocs\pak-gas-app as the Apache DocumentRoot.
+
+### 7. Updating the application
+
+Copy/pull the new application version.
+
+When a new migration exists in database/migrations/:
+
+~~~text
+001_add_example_column.sql
+002_create_example_index.sql
+~~~
+
+the next normal application request is redirected automatically to /install.
+
+The installation/update page runs all unapplied migrations in filename order. After successful updates, it redirects to Login.
+
+Migration files are tracked in the schema_migrations table with a SHA-256 checksum. An already-applied migration must never be edited; create a new migration instead.
+
+### 8. Quick local development option
+
+~~~bat
 cd C:\xampp\htdocs\pak-gas-app
 php -S localhost:8080 -t public
-```
+~~~
 
-Then set APP_URL=http://localhost:8080 in .env.
+Set:
 
-Composer is not required.
+~~~dotenv
+APP_URL=http://localhost:8080
+~~~
 
-### 8. First-run verification
+Then open:
 
-1. Login page opens.
-2. Admin login works.
-3. First login forces password change.
-4. Dashboard opens.
-5. Parties, Cylinder Groups, Cylinders and Rates open.
-6. Opening Stock can create cylinders and show history.
-7. POS transaction type loads from settings and changes line behavior.
-8. Sales History, Receipts, Purchases, Payments, Cheques, Expenses and Reports open.
-9. Unauthorized screens return server-side HTTP 403.
-10. Runtime checks pass:
+~~~text
+http://localhost:8080/
+~~~
 
-```bat
-php bin\test.php
-```
-
-Expected:
-
-```text
-All runtime checks passed.
-```
-
-## Database structure
-
-All database creation, table creation, indexes, views and static seed data are maintained in:
-
-```text
-database\schema.sql
-```
-
-Do not add migration scripts to this project.
-
-## Windows backup
+### 9. Backup and restore on Windows
 
 Backup:
 
-```bat
+~~~bat
+mkdir C:\backup
 C:\xampp\mysql\bin\mysqldump.exe -u root -p --single-transaction --routines --triggers pak_gas > C:\backup\pak_gas_backup.sql
-```
+~~~
 
 Restore:
 
-```bat
+~~~bat
 C:\xampp\mysql\bin\mysql.exe -u root -p pak_gas < C:\backup\pak_gas_backup.sql
-```
+~~~
 
-Always test a restore on a recovery database.
+Always test restore procedures on a recovery database.
 
-## Important note
+## Database structure
 
-database/schema.sql is the baseline database definition for new installations. It is intentionally not a migration engine. Before rebuilding an existing production database, take a full backup and validate the target schema and data separately.
+database/schema.sql is the canonical clean-install baseline containing database creation compatibility, all table definitions, indexes, views and static seed data.
+
+Future incremental changes belong only in numbered files under:
+
+~~~text
+database/migrations/
+~~~
+
+The runtime migration queue is automatic; there is no manual migration command.
+
+## CLI compatibility
+
+The following command remains available for maintenance/troubleshooting, but is not part of the normal installation process:
+
+~~~bat
+php bin\seed.php
+~~~
+
+It runs pending migrations and creates/refreshes the administrator from .env.
+
+## Verification
+
+The repository CI validates PHP syntax, runtime checks, schema import and the automatic migration runner.
+
+For local runtime checks:
+
+~~~bat
+php bin\test.php
+~~~
+
+Expected:
+
+~~~text
+All runtime checks passed.
+~~~
