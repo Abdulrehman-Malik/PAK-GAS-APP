@@ -137,12 +137,12 @@ final class PosService
                     if (bccomp($rate, '0.00', 2) <= 0) {
                         $rate = $resolvedRate;
                     } elseif (!$rateEditAllowed && bccomp($rate, $resolvedRate, 2) !== 0) {
-                        throw new \\InvalidArgumentException('Rate editing is disabled for POS.');
+                        throw new \InvalidArgumentException('Rate editing is disabled for POS.');
                     }
                     if (bccomp($cprice, '0.00', 2) <= 0) {
                         $cprice = $resolvedCylinderPrice;
                     } elseif (!$rateEditAllowed && bccomp($cprice, $resolvedCylinderPrice, 2) !== 0) {
-                        throw new \\InvalidArgumentException('Cylinder price editing is disabled for POS.');
+                        throw new \InvalidArgumentException('Cylinder price editing is disabled for POS.');
                     }
 
                     if (bccomp($gas, '0.000', 3) < 0 || bccomp($gas, $capacity, 3) > 0) {
@@ -235,7 +235,7 @@ final class PosService
             $advanceSetting = $this->db->fetchOne("SELECT setting_value FROM settings WHERE setting_group='sales_credit' AND setting_key='allow_advance'");
             $allowAdvance = filter_var((string)($advanceSetting['setting_value'] ?? '1'), FILTER_VALIDATE_BOOL);
             if (!$allowAdvance && bccomp($newBalance, '0.00', 2) < 0) {
-                throw new \\InvalidArgumentException('Advance balance is disabled for this shop.');
+                throw new \InvalidArgumentException('Advance balance is disabled for this shop.');
             }
 
             if ($enforcement === 'BLOCK' && bccomp($newBalance, '0.00', 2) > 0) {
@@ -347,7 +347,7 @@ final class PosService
                     $chequeNo = trim((string)($cheque['cheque_no'] ?? ''));
                     $chequeDate = (string)($cheque['cheque_date'] ?? '');
                     if ($chequeNo === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $chequeDate)) {
-                        throw new \\InvalidArgumentException('Cheque number and cheque date are required.');
+                        throw new \InvalidArgumentException('Cheque number and cheque date are required.');
                     }
                     $this->db->execute(
                         'INSERT INTO cheques
