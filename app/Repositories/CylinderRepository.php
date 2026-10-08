@@ -9,7 +9,8 @@ final class CylinderRepository
         $where='1=1';$params=['limit'=>$limit,'offset'=>$offset];
         if($search!==''){ $where.=' AND (c.code LIKE :search OR c.group_name LIKE :search)';$params['search']='%'.$search.'%';}
         if($groupId>0){$where.=' AND c.group_id=:group_id';$params['group_id']=$groupId;}
-        $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM v_cylinder_status c WHERE {$where}",$params)['c']??0);
+        $countParams=$params;unset($countParams['limit'],$countParams['offset']);
+        $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM v_cylinder_status c WHERE {$where}",$countParams)['c']??0);
         return ['rows'=>$this->db->fetchAll("SELECT * FROM v_cylinder_status c WHERE {$where} ORDER BY c.active DESC,c.code LIMIT :limit OFFSET :offset",$params),'total'=>$total];
     }
     public function find(int $id):?array{return $this->db->fetchOne('SELECT * FROM v_cylinder_status WHERE id=:id',['id'=>$id]);}
