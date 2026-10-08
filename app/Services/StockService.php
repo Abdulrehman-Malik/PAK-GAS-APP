@@ -301,7 +301,7 @@ final class StockService
 
                 for($i=0;$i<$quantity;$i++){
                     $code=$this->codes->nextCylinderCode((int)$group['id'],(string)$group['code'],(string)$row['code_mode'],(string)($codes[$i]??''));
-                    $this->db->execute('INSERT INTO cylinders(code,group_id,gas_kg,location,customer_id,condition_code,active,created_by,updated_by) VALUES(:code,:group_id,:gas_kg,:location,:customer_id,:condition_code,1,:uid,:uid)',[
+                    $this->db->execute('INSERT INTO cylinders(code,group_id,gas_kg,location,customer_id,condition_code,source,active,created_by,updated_by) VALUES(:code,:group_id,:gas_kg,:location,:customer_id,:condition_code,'OPENING',1,:uid,:uid)',[
                         'code'=>$code,'group_id'=>$group['id'],'gas_kg'=>$gas,'location'=>$location==='ISSUED'?'CUSTOMER':'SHOP','customer_id'=>$customerId,'condition_code'=>$row['condition_code'],'uid'=>$userId
                     ]);
                     $cylinderId=(int)$this->db->lastInsertId();
