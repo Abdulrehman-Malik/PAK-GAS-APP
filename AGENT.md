@@ -158,11 +158,11 @@ Invariants (each has a test):
 ## 11. Phased work plan
 
 ### Phase 0 — Foundation
-- [ ] Repo skeleton, Composer, autoload, `.env` loader, front controller, router
-- [ ] `DB` (PDO) wrapper with transactions; `bin/migrate.php`; `001_core.sql` (users, roles, permissions, settings, audit_log, sequences)
-- [ ] Auth (login/logout, session hardening, throttling, CSRF), role/permission middleware
-- [ ] Main layout (sidebar, topbar, flash, modal/toast helpers), shared JS (`$.ajaxSetup` CSRF, DataTables defaults, number helpers)
-- [ ] Settings screen shell with tabs; seed script
+- [x] Repo skeleton, Composer, autoload, `.env` loader, front controller, router
+- [x] `DB` (PDO) wrapper with transactions; `bin/migrate.php`; `001_core.sql` (users, roles, permissions, settings, audit_log, sequences)
+- [x] Auth (login/logout, session hardening, throttling, CSRF), role/permission middleware
+- [x] Main layout (sidebar, topbar, flash, modal/toast helpers), shared JS (`$.ajaxSetup` CSRF, DataTables defaults, number helpers)
+- [x] Settings screen shell with tabs; seed script
 
 ### Phase 1 — Masters
 - [ ] Settings: General, Code Generation, Sales & Credit, Tax, Document Numbers, Printing
@@ -233,7 +233,7 @@ vendor/bin/phpunit              # run tests
 
 | Date | Phase/Task | Status | Notes for next session |
 |---|---|---|---|
-| | | | |
+| 2026-10-08 | Phase 0 — Foundation | Completed | Added custom PHP foundation, PDO migration/seed tooling, auth/security shell, responsive Bootstrap/jQuery UI, QA checklist and CI. Next: Phase 1 masters. |
 
 ## 15. Open questions for the product owner
 

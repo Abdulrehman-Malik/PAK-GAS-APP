@@ -1,0 +1,8 @@
+/.env
+/.env.local
+/vendor/
+/storage/logs/*
+/storage/uploads/*
+/storage/imports/*
+/storage/backups/*
+/.phpunit.result.cache
