@@ -19,6 +19,16 @@ final class UserController
         try{$id=$this->service->create($this->request->input(),(int)$this->auth->user()['id'],$this->request->ip());return Response::json(['ok'=>true,'data'=>['id'=>$id],'message'=>'User created.']);}
         catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
+    public function deactivate():Response
+    {
+        try{$this->service->deactivate((int)$this->request->input()['id'],(int)$this->auth->user()['id'],$this->request->ip());return Response::json(['ok'=>true,'message'=>'User deactivated.']);}
+        catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
+    }
+    public function activate():Response
+    {
+        try{$this->service->activate((int)$this->request->input()['id'],(int)$this->auth->user()['id'],$this->request->ip());return Response::json(['ok'=>true,'message'=>'User activated.']);}
+        catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
+    }
     public function permissions():Response{
         try{$d=$this->request->input();$this->service->setRolePermissions((int)$d['role_id'],(array)($d['permission_ids']??[]),(int)$this->auth->user()['id'],$this->request->ip());return Response::json(['ok'=>true,'message'=>'Role permissions saved.']);}
         catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
