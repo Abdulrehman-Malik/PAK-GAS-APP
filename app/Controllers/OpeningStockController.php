@@ -46,12 +46,26 @@ final class OpeningStockController
     public function template():Response{
         $path=base_path('storage/imports/opening_stock_template.xlsx');
         if(!is_dir(dirname($path)))mkdir(dirname($path),0775,true);
-        $this->xlsx->write($path,
-            ['group_code','group_name','capacity','cylinder_code','quantity','actual_gas','location','customer_code','condition','date','code_mode'],
-            [
-                ['group_code'=>'C','group_name'=>'15 KG Cylinder','capacity'=>'15.000','cylinder_code'=>'','quantity'=>'3','actual_gas'=>'15.000','location'=>'SHOP','customer_code'=>'','condition'=>'GOOD','date'=>date('Y-m-d'),'code_mode'=>'AUTO']
-            ]
-        );
+        $this->xlsx->writeWorkbook($path, [
+            'Opening Stock' => [
+                'headers' => ['group_code','group_name','capacity','cylinder_code','quantity','actual_gas','location','customer_code','condition','date','code_mode'],
+                'rows' => [
+                    ['group_code'=>'C','group_name'=>'15 KG Cylinder','capacity'=>'15.000','cylinder_code'=>'','quantity'=>'3','actual_gas'=>'15.000','location'=>'SHOP','customer_code'=>'','condition'=>'GOOD','date'=>date('Y-m-d'),'code_mode'=>'AUTO']
+                ],
+            ],
+            'Instructions' => [
+                'headers' => ['Field','Rule'],
+                'rows' => [
+                    ['Field'=>'group_code','Rule'=>'Required. Existing group is reused; unknown group is created.'],
+                    ['Field'=>'capacity','Rule'=>'Required and must match the existing group capacity.'],
+                    ['Field'=>'actual_gas','Rule'=>'0 to cylinder capacity, maximum 3 decimals.'],
+                    ['Field'=>'location','Rule'=>'SHOP or ISSUED. ISSUED requires an active customer_code.'],
+                    ['Field'=>'quantity','Rule'=>'Required in AUTO mode; ignored in MANUAL mode.'],
+                    ['Field'=>'cylinder_code','Rule'=>'MANUAL: provide one unique code per cylinder, separated by comma or whitespace. AUTO: leave blank.'],
+                    ['Field'=>'code_mode','Rule'=>'AUTO or MANUAL.'],
+                ],
+            ],
+        ]);
         return Response::binary((string)file_get_contents($path),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','opening_stock_template.xlsx');
     }
 
