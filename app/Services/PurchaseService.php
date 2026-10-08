@@ -18,6 +18,50 @@ final class PurchaseService
     ) {
     }
 
+    public function history(array $filters, int $limit, int $offset):array
+    {
+        $where=['1=1'];$params=[];
+        if(($filters['from']??'')!==''){$where[]='pu.purchase_date>=:from';$params['from']=$filters['from'];}
+        if(($filters['to']??'')!==''){$where[]='pu.purchase_date<=:to';$params['to']=$filters['to'];}
+        if((int)($filters['supplier_id']??0)>0){$where[]='pu.supplier_id=:supplier';$params['supplier']=(int)$filters['supplier_id'];}
+        if(($filters['status']??'')!==''){$where[]='pu.status=:status';$params['status']=$filters['status'];}
+        if(($filters['search']??'')!==''){$where[]='(pu.doc_no LIKE :search OR p.name LIKE :search OR p.code LIKE :search OR pu.supplier_invoice_no LIKE :search)';$params['search']='%'.$filters['search'].'%';}
+        $base='FROM purchases pu INNER JOIN parties p ON p.id=pu.supplier_id WHERE '.implode(' AND ',$where);
+        $total=(int)($this->db->fetchOne('SELECT COUNT(*) c '.$base,$params)['c']??0);
+        $params['limit']=$limit;$params['offset']=$offset;
+        $rows=$this->db->fetchAll(
+            'SELECT pu.*,p.code supplier_code,p.name supplier_name,
+                    (SELECT COUNT(*) FROM purchase_lines pl WHERE pl.purchase_id=pu.id) lines_count
+             '.$base.' ORDER BY pu.purchase_date DESC,pu.id DESC LIMIT :limit OFFSET :offset',
+            $params
+        );
+        return ['rows'=>$rows,'total'=>$total];
+    }
+
+    public function suppliers(string $q):array
+    {
+        return $this->db->fetchAll(
+            "SELECT id,code,name FROM parties
+             WHERE party_type='SUPPLIER' AND active=1
+               AND (code LIKE :q OR name LIKE :q OR phone LIKE :q)
+             ORDER BY name LIMIT 30",
+            ['q'=>'%'.$q.'%']
+        );
+    }
+
+    public function shopCylinders(array $filters):array
+    {
+        $where=["c.active=1","c.condition_code='GOOD'","c.location='SHOP'"];
+        $params=[];
+        if((int)($filters['group_id']??0)>0){$where[]='c.group_id=:group';$params['group']=(int)$filters['group_id'];}
+        return $this->db->fetchAll(
+            'SELECT c.id,c.code,c.group_id,c.gas_kg,cg.name group_name,cg.capacity_kg
+             FROM cylinders c INNER JOIN cylinder_groups cg ON cg.id=c.group_id
+             WHERE '.implode(' AND ',$where).' ORDER BY c.code',
+            $params
+        );
+    }
+
     public function post(array $input, int $userId): array
     {
         $date = (string) ($input['purchase_date'] ?? date('Y-m-d'));
