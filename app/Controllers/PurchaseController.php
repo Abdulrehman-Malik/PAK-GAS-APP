@@ -19,7 +19,10 @@ final class PurchaseController
         return Response::json(['ok'=>true,'data'=>$this->service->history($q,$limit,$offset)]);
     }
     public function store():Response{
-        try{$r=$this->service->post($this->request->input(),(int)$this->auth->user()['id']);return Response::json(['ok'=>true,'data'=>$r,'message'=>'Purchase posted.']);}
+        try{
+            $input=$this->request->input();
+            $input['lines']=json_decode((string)($input['lines_json']??'[]'),true,512,JSON_THROW_ON_ERROR);
+            $r=$this->service->post($input,(int)$this->auth->user()['id']);return Response::json(['ok'=>true,'data'=>$r,'message'=>'Purchase posted.']);}
         catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
     public function void():Response{
@@ -28,4 +31,5 @@ final class PurchaseController
     }
     public function suppliers():Response{$q=trim((string)($this->request->query()['q']??''));return Response::json(['ok'=>true,'data'=>$this->service->suppliers($q)]);}
     public function cylinders():Response{return Response::json(['ok'=>true,'data'=>$this->service->shopCylinders($this->request->query())]);}
+    public function groups():Response{return Response::json(['ok'=>true,'data'=>$this->service->groups()]);}
 }
