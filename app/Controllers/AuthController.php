@@ -24,7 +24,7 @@ final class AuthController
     public function showLogin(): Response
     {
         if ($this->auth->check()) {
-            return Response::redirect(url('/'));
+            return Response::redirect($this->auth->mustChangePassword() ? url('/password/change') : url('/'));
         }
 
         return View::render('auth/login', [
@@ -53,7 +53,7 @@ final class AuthController
             return Response::redirect(url('/login'));
         }
 
-        return Response::redirect(url('/'));
+        return Response::redirect($this->auth->mustChangePassword() ? url('/password/change') : url('/'));
     }
 
     public function logout(): Response
