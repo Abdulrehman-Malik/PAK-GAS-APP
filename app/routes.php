@@ -13,6 +13,7 @@ use App\Controllers\OpeningStockController;
 use App\Controllers\PosController;
 use App\Controllers\SalesController;
 use App\Controllers\ReportController;
+use App\Controllers\AuditController;
 use App\Controllers\UserController;
 use App\Controllers\ExpenseController;
 use App\Controllers\ChequeController;
@@ -100,6 +101,7 @@ $chequeController = new ChequeController($db, $auth, $request, $chequeService);
 $expenseController = new ExpenseController($db, $auth, $request, $expenseService);
 $userController = new UserController($db, $auth, $request, $userService);
 $reportController = new ReportController($db, $auth, $request);
+$auditController = new AuditController($db, $auth, $request);
 
 
 $router->get('/login', [$authController, 'showLogin']);
@@ -180,6 +182,8 @@ $router->post('/users/roles/{role}/permissions', [$userController, 'saveRolePerm
 $router->get('/reports', [$reportController, 'index'], true, 'reports.view');
 $router->get('/reports/data', [$reportController, 'data'], true, 'reports.view');
 $router->get('/reports/csv', [$reportController, 'csv'], true, 'reports.view');
+$router->get('/audit', [$auditController, 'index'], true, 'users.view');
+$router->get('/audit/data', [$auditController, 'data'], true, 'users.view');
 
 $router->get('/counter', [$counterController, 'index'], true, 'counter.view');
 $router->get('/counter/status', [$counterController, 'status'], true, 'counter.view');
