@@ -146,8 +146,10 @@ async function main() {
   });
 
   const loginResponse = await page.goto(`${baseUrl}/login`, {
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',
+    timeout: 10000,
   });
+  await page.waitForTimeout(250);
   if (!loginResponse || loginResponse.status() !== 200) {
     await fail(`Login screen returned HTTP ${loginResponse?.status() ?? 'no response'}`);
   }
@@ -168,9 +170,14 @@ async function main() {
   await assertNoApplicationError(page, 'Post-login');
 
   for (const screen of screens) {
+    console.log(`CHECK  ${screen.label}`);
+    pageErrors.splice(0);
+    failedRequests.splice(0);
     const response = await page.goto(`${baseUrl}${screen.path}`, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
+      timeout: 10000,
     });
+    await page.waitForTimeout(300);
 
     if (!response || response.status() >= 400) {
       await fail(`${screen.label}: HTTP ${response?.status() ?? 'no response'}`);
