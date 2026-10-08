@@ -1,19 +1,31 @@
 <?php
+
 declare(strict_types=1);
+
 namespace App\Repositories;
+
 use App\Core\DB;
+
 final class PartyRepository
 {
     public function __construct(private readonly DB $db) {}
-    public function paginate(string $type, string $search, int $limit, int $offset): array
-    {
-        $where='party_type=:type'; $params=['type'=>$type,'limit'=>$limit,'offset'=>$offset];
-        if($search!==''){ $where.=' AND (code LIKE :search OR name LIKE :search OR phone LIKE :search)'; $params['search']='%'.$search.'%'; }
-        $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM parties WHERE {$where}", $params)['c']??0);
-        $rows=$this->db->fetchAll("SELECT * FROM parties WHERE {$where} ORDER BY active DESC,name LIMIT :limit OFFSET :offset",$params);
+
+    public function paginate(string $type,string $search,int $limit,int $offset):array{
+        $where='p.party_type=:type';$params=['type'=>$type,'limit'=>$limit,'offset'=>$offset];
+        if($search!==''){$where.=' AND (p.code LIKE :search OR p.name LIKE :search OR p.phone LIKE :search)';$params['search']='%'.$search.'%';}
+        $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM parties p WHERE {$where}",$params)['c']??0);
+        $rows=$this->db->fetchAll("SELECT p.*,COALESCE(v.balance,p.opening_balance) balance FROM parties p LEFT JOIN v_party_balance v ON v.id=p.id WHERE {$where} ORDER BY p.active DESC,p.name LIMIT :limit OFFSET :offset",$params);
         return ['rows'=>$rows,'total'=>$total];
     }
-    public function find(int $id): ?array { return $this->db->fetchOne('SELECT * FROM parties WHERE id=:id',['id'=>$id]); }
-    public function create(array $d): int { $this->db->execute('INSERT INTO parties(code,party_type,name,phone,address,allow_credit,credit_limit,opening_balance,active,notes,created_by,updated_by) VALUES(:code,:party_type,:name,:phone,:address,:allow_credit,:credit_limit,:opening_balance,1,:notes,:uid,:uid)',$d); return $this->db->lastInsertId(); }
-    public function update(int $id,array $d): void { $d['id']=$id; $this->db->execute('UPDATE parties SET name=:name,phone=:phone,address=:address,allow_credit=:allow_credit,credit_limit=:credit_limit,notes=:notes,active=:active,updated_by=:uid WHERE id=:id',$d); }
+    public function find(int $id):?array{return $this->db->fetchOne('SELECT * FROM parties WHERE id=:id',['id'=>$id]);}
+    public function create(array $d):int{$this->db->execute('INSERT INTO parties(code,party_type,name,phone,address,allow_credit,credit_limit,opening_balance,active,notes,created_by,updated_by) VALUES(:code,:party_type,:name,:phone,:address,:allow_credit,:credit_limit,:opening_balance,1,:notes,:uid,:uid)',$d);return $this->db->lastInsertId();}
+    public function update(int $id,array $d):void{$d['id']=$id;$this->db->execute('UPDATE parties SET name=:name,phone=:phone,address=:address,allow_credit=:allow_credit,credit_limit=:credit_limit,notes=:notes,active=:active,updated_by=:uid WHERE id=:id',$d);}
+    public function childCount(int $id):int{
+        $total=0;
+        foreach([['cylinders','customer_id'],['sales','customer_id'],['receipts','party_id'],['purchases','supplier_id'],['payments','party_id'],['ledger_entries','party_id'],['cheques','party_id']] as [$table,$column]){
+            $total+=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM {$table} WHERE {$column}=:id",['id'=>$id])['c']??0);
+        }
+        return $total;
+    }
+    public function delete(int $id):void{$this->db->execute('DELETE FROM parties WHERE id=:id',['id'=>$id]);}
 }
