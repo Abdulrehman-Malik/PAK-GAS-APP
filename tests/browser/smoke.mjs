@@ -91,9 +91,29 @@ async function testTabs(page, label) {
     const target = await tab.getAttribute('data-lpg-tab-target') || await tab.getAttribute('data-bs-target') || await tab.getAttribute('href');
     if (!target || !target.startsWith('#')) continue;
 
+    const tabControllerAvailable = await page.evaluate(() => typeof window.Lpg?.activateTab === 'function');
+    if (!tabControllerAvailable) {
+      await fail(`${label}: application tab controller is not loaded`);
+    }
+
     await tab.click();
 
     await tab.waitFor({ state: 'visible' });
+    const debugState = await page.evaluate(
+      ({ tabId, targetSelector }) => {
+        const tab = document.getElementById(tabId);
+        const pane = document.querySelector(targetSelector);
+        return {
+          tabClass: tab?.className || '',
+          paneClass: pane?.className || '',
+          tabId,
+          targetSelector,
+        };
+      },
+      { tabId: await tab.getAttribute('id'), targetSelector: target }
+    );
+    console.log(`TABSTATE ${label}: ${JSON.stringify(debugState)}`);
+
     await page.waitForFunction(
       ({ tabId, targetSelector }) => {
         const tab = document.getElementById(tabId);
