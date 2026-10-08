@@ -62,8 +62,12 @@ final class ExpenseService
         $total=(int)($this->db->fetchOne('SELECT COUNT(*) c '.$base,$params)['c']??0);
         $params['limit']=$limit;$params['offset']=$offset;
         $rows=$this->db->fetchAll(
-            'SELECT e.*,c.name category_name,u.full_name user_name,co.name counter_name '.$base.'
+            'SELECT e.*,c.name category_name,u.full_name user_name,co.name counter_name
+             FROM expenses e
+             INNER JOIN expense_categories c ON c.id=e.category_id
+             LEFT JOIN users u ON u.id=e.created_by
              LEFT JOIN counters co ON co.id=e.counter_id
+             WHERE '.implode(' AND ',$where).'
              ORDER BY e.expense_date DESC,e.id DESC LIMIT :limit OFFSET :offset',
             $params
         );
