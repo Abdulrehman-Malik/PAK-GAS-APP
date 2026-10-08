@@ -288,11 +288,11 @@ final class PurchaseService
                 if ($method === 'CHEQUE') {
                     $chequeNo = trim((string) ($input['cheque_no'] ?? ''));
                     if ($chequeNo === '') {
-                        throw new \\InvalidArgumentException('Cheque number is required.');
+                        throw new \InvalidArgumentException('Cheque number is required.');
                     }
                     $chequeDate = (string) ($input['cheque_date'] ?? $date);
                     if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $chequeDate)) {
-                        throw new \\InvalidArgumentException('Cheque date is invalid.');
+                        throw new \InvalidArgumentException('Cheque date is invalid.');
                     }
                     $cheque = $this->db->execute(
                         'INSERT INTO cheques
