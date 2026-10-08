@@ -1,0 +1,17 @@
+:root{--lpg-sidebar-width:250px;--lpg-border:#e7e9ee;--lpg-bg:#f6f7fb}
+body{background:var(--lpg-bg)}
+.app-shell{min-height:100vh;display:flex}
+.sidebar{width:var(--lpg-sidebar-width);background:#fff;border-right:1px solid var(--lpg-border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header,.sidebar-footer{padding:1rem}
+.sidebar-header{border-bottom:1px solid var(--lpg-border);display:flex;align-items:center;justify-content:space-between}
+.brand{color:inherit;font-weight:700;text-decoration:none}
+.sidebar .nav-link{margin-top:.25rem;border-radius:.5rem;color:#495057}
+.sidebar .nav-link:hover,.sidebar .nav-link:focus{background:#f2f4f8;color:#212529}
+.sidebar-footer{margin-top:auto;border-top:1px solid var(--lpg-border)}
+.app-main{min-width:0;flex:1}
+.topbar{min-height:64px;background:#fff;border-bottom:1px solid var(--lpg-border);display:flex;align-items:center;padding:0 1rem}
+.login-page{min-height:100vh;display:grid;place-items:center;padding:1rem}
+.login-card{width:min(100%,430px)}
+.card{border-color:var(--lpg-border)}
+.form-control,.form-select,.btn{min-height:44px}
+@media (max-width:991.98px){.sidebar{width:min(88vw,var(--lpg-sidebar-width))}}
