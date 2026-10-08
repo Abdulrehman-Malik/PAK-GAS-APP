@@ -7,7 +7,7 @@ final class CylinderRepository
     public function __construct(private readonly DB $db) {}
     public function paginate(string $search,int $groupId,int $limit,int $offset):array{
         $where='1=1';$params=['limit'=>$limit,'offset'=>$offset];
-        if($search!==''){ $where.=' AND (c.code LIKE :search OR cg.name LIKE :search)';$params['search']='%'.$search.'%';}
+        if($search!==''){ $where.=' AND (c.code LIKE :search OR c.group_name LIKE :search)';$params['search']='%'.$search.'%';}
         if($groupId>0){$where.=' AND c.group_id=:group_id';$params['group_id']=$groupId;}
         $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM v_cylinder_status c WHERE {$where}",$params)['c']??0);
         return ['rows'=>$this->db->fetchAll("SELECT * FROM v_cylinder_status c WHERE {$where} ORDER BY c.active DESC,c.code LIMIT :limit OFFSET :offset",$params),'total'=>$total];
