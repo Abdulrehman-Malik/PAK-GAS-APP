@@ -60,6 +60,7 @@ final class ImportController
                 'rows_total'=>$result['rows_total'],
                 'rows_ok'=>$result['rows_ok'],
                 'rows_error'=>$result['rows_error'],
+                'errors'=>$result['errors'],
                 'created_at'=>time()
             ];
 
@@ -81,6 +82,24 @@ final class ImportController
         }catch(\Throwable $e){
             return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);
         }
+    }
+
+    public function errorReport():Response
+    {
+        $token=(string)($this->request->query()['token']??'');
+        $preview=$_SESSION['import_previews'][$token]??null;
+        if(!$preview) return Response::json(['ok'=>false,'message'=>'Import preview not found or expired.'],404);
+
+        $handle=fopen('php://temp','r+');
+        if($handle===false)throw new \RuntimeException('Unable to create report.');
+        fputcsv($handle,['row','message','data']);
+        foreach(($preview['errors']??[]) as $error){
+            fputcsv($handle,[(string)($error['row']??''),(string)($error['message']??''),json_encode($error['data']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+        }
+        rewind($handle);
+        $csv=(string)stream_get_contents($handle);fclose($handle);
+        header('Content-Disposition: attachment; filename="import-errors.csv"');
+        return Response::binary($csv,'text/csv; charset=UTF-8');
     }
 
     public function commit(): Response
