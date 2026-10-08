@@ -14,14 +14,14 @@ $settings=[];foreach($printing as $s)$settings[$s['setting_key']]=$s['setting_va
     <?php foreach($lines as $l): ?>
         <div class="row">
             <span><?=e($l['line_type'])?> <?=e($l['cylinder_code'])?> / <?=e($l['group_name'])?></span>
-            <span><?=number_format((float)$l['amount'],2)?></span>
+            <span><?=bcadd((string)$l['amount'],'0.00',2)?></span>
         </div>
-        <div class="small"><?=number_format((float)$l['gas_kg'],3)?> kg × <?=number_format((float)$l['rate'],2)?></div>
+        <div class="small"><?=bcadd((string)$l['gas_kg'],'0.000',3)?> kg × <?=bcadd((string)$l['rate'],'0.00',2)?></div>
     <?php endforeach; ?>
 <?php endif; ?>
-<?php if(isset($r['net_amount'])): ?><div class="row bold"><span>Net</span><span><?=number_format((float)$r['net_amount'],2)?></span></div><?php endif; ?>
-<?php if(isset($r['amount'])): ?><div class="row"><span>Receipt</span><span><?=number_format((float)$r['amount'],2)?></span></div><?php endif; ?>
-<?php if(isset($r['received_amount'])): ?><div class="row"><span>Received</span><span><?=number_format((float)$r['received_amount'],2)?></span></div><?php endif; ?>
-<?php if(isset($r['balance_after'])): ?><div class="row bold"><span>Balance</span><span><?=number_format((float)$r['balance_after'],2)?></span></div><?php endif; ?>
+<?php if(isset($r['net_amount'])): ?><div class="row bold"><span>Net</span><span><?=bcadd((string)$r['net_amount'],'0.00',2)?></span></div><?php endif; ?>
+<?php if(isset($r['amount'])): ?><div class="row"><span>Receipt</span><span><?=bcadd((string)$r['amount'],'0.00',2)?></span></div><?php endif; ?>
+<?php if(isset($r['received_amount'])): ?><div class="row"><span>Received</span><span><?=bcadd((string)$r['received_amount'],'0.00',2)?></span></div><?php endif; ?>
+<?php if(isset($r['balance_after'])): ?><div class="row bold"><span>Balance</span><span><?=bcadd((string)$r['balance_after'],'0.00',2)?></span></div><?php endif; ?>
 <?php if(isset($r['method'])): ?><div class="row"><span>Method</span><span><?=e($r['method'])?></span></div><?php endif; ?>
 <div class="center small" style="margin-top:8px">Printed <?=e(date('Y-m-d H:i:s'))?></div>
