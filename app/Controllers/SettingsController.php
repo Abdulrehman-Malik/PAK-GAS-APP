@@ -11,6 +11,7 @@ use App\Core\Request;
 use App\Services\AuditService;
 use App\Services\SettingsService;
 use App\Services\DocNumberService;
+use App\Services\CounterService;
 
 final class SettingsController
 {
@@ -19,7 +20,8 @@ final class SettingsController
         private readonly Auth $auth,
         private readonly Request $request,
         private readonly AuditService $audit,
-        private readonly DocNumberService $docs
+        private readonly DocNumberService $docs,
+        private readonly CounterService $counters
     ) {
     }
 
@@ -83,6 +85,8 @@ final class SettingsController
         return View::render('settings/index', [
             'pageTitle' => 'Settings',
             'settings' => $this->settings->all(),
+            'docNumbers' => $this->docs->definitions(),
+            'counters' => $this->counters->active(),
             'user' => $this->auth->user(),
             '_base_path' => base_path(),
         ]);
