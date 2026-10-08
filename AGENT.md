@@ -239,3 +239,7 @@ vendor/bin/phpunit              # run tests
 ## 15. Open questions for the product owner
 
 See `REQUIREMENTS.md` §11. Do not block on them: implement the stated default and keep it switchable.
+
+
+### 2026-10-08 Business-flow implementation rule
+- Transactional work must be verified end-to-end after each change. POS changes must exercise transaction-type selection, cylinder selection, pricing, stock movement, ledger posting, payment/cash integration, and failure rollback before being considered done.
