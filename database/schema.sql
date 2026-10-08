@@ -12,6 +12,13 @@ USE pak_gas;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    migration VARCHAR(255) NOT NULL UNIQUE,
+    checksum CHAR(64) NOT NULL,
+    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP VIEW IF EXISTS v_shop_stock_summary;
 DROP VIEW IF EXISTS v_cylinder_status;
 DROP VIEW IF EXISTS v_party_balance;
@@ -674,5 +681,9 @@ INSERT INTO expense_categories(name,active) VALUES
 ('Rent',1),
 ('Misc',1)
 ON DUPLICATE KEY UPDATE active=1;
+
+INSERT INTO schema_migrations (migration, checksum, applied_at)
+VALUES ('__SCHEMA_BASELINE__', SHA2('database/schema.sql baseline', 256), NOW())
+ON DUPLICATE KEY UPDATE checksum = VALUES(checksum);
 
 SET FOREIGN_KEY_CHECKS = 1;
