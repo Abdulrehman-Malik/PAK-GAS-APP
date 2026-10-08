@@ -151,8 +151,9 @@ final class PosService
             }
 
             $net=bcadd(bcsub(bcadd($issue,$sold,2),$returned,2),$tax,2);
+            $effectiveReceived = ($method === 'CHEQUE' && $this->chequePostingMode() === 'ON_CLEARANCE') ? '0.00' : $received;
             $oldBalance=$this->ledger->balance($customerId);
-            $newBalance=bcadd($oldBalance,bcsub($net,$received,2),2);
+            $newBalance=bcadd($oldBalance,bcsub($net,$effectiveReceived,2),2);
 
             if(!$this->allowAdvance()&&bccomp($newBalance,'0.00',2)<0){
                 throw new \InvalidArgumentException('Advance payment is disabled for POS.');
