@@ -116,6 +116,7 @@ $router->post('/settings/group', [$settingsController, 'updateGroup'], true, 'se
 $router->get('/parties', [$partyController, 'index'], true, 'parties.view');
 $router->get('/parties/data', [$partyController, 'data'], true, 'parties.view');
 $router->post('/parties', [$partyController, 'store'], true, 'parties.create');
+$router->post('/parties/update', [$partyController, 'update'], true, 'parties.create');
 $router->post('/parties/delete', [$partyController, 'delete'], true, 'parties.create');
 $router->post('/parties/deactivate', [$partyController, 'deactivate'], true, 'parties.create');
 $router->get('/parties/import-template', [$importController, 'template'], true, 'parties.create');
@@ -125,12 +126,14 @@ $router->post('/parties/import-commit', [$importController, 'commit'], true, 'pa
 $router->get('/cylinder-groups', [$groupController, 'index'], true, 'cylinder_groups.view');
 $router->get('/cylinder-groups/data', [$groupController, 'data'], true, 'cylinder_groups.view');
 $router->post('/cylinder-groups', [$groupController, 'store'], true, 'cylinder_groups.create');
+$router->post('/cylinder-groups/update', [$groupController, 'update'], true, 'cylinder_groups.create');
 $router->post('/cylinder-groups/delete', [$groupController, 'delete'], true, 'cylinder_groups.create');
 $router->post('/cylinder-groups/deactivate', [$groupController, 'deactivate'], true, 'cylinder_groups.create');
 
 $router->get('/cylinders', [$cylinderController, 'index'], true, 'cylinders.view');
 $router->get('/cylinders/data', [$cylinderController, 'data'], true, 'cylinders.view');
 $router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.create');
+$router->post('/cylinders/update', [$cylinderController, 'update'], true, 'cylinders.create');
 $router->get('/cylinders/history', [$cylinderController, 'history'], true, 'cylinders.view');
 $router->post('/cylinders/delete', [$cylinderController, 'delete'], true, 'cylinders.create');
 $router->post('/cylinders/deactivate', [$cylinderController, 'deactivate'], true, 'cylinders.create');
