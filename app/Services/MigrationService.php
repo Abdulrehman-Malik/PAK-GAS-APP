@@ -12,6 +12,17 @@ final class MigrationService
 
     public function run(): array
     {
+        $locked = (int) $this->db->pdo()->query("SELECT GET_LOCK('pak_gas_migrations', 30)")->fetchColumn() === 1;
+        if (!$locked) throw new \\RuntimeException('Could not acquire migration lock. Please try again.');
+        try {
+            return $this->runLocked();
+        } finally {
+            $this->db->pdo()->query("SELECT RELEASE_LOCK('pak_gas_migrations')");
+        }
+    }
+
+    private function runLocked(): array
+    {
         $this->db->pdo()->exec("CREATE TABLE IF NOT EXISTS migrations (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, filename VARCHAR(255) NOT NULL UNIQUE, applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $files = glob($this->basePath . '/database/migrations/*.sql') ?: [];
         sort($files, SORT_NATURAL);
