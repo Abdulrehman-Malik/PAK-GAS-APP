@@ -167,6 +167,8 @@ $router->get('/counter', [$counterController, 'index'], true, 'counter.view');
 $router->get('/counter/status', [$counterController, 'status'], true, 'counter.view');
 $router->post('/counter/open', [$counterController, 'open'], true, 'counter.open');
 $router->post('/counter/close', [$counterController, 'close'], true, 'counter.close');
+$router->post('/counter/manual', [$counterController, 'manual'], true, 'counter.close');
+$router->post('/counter/transfer', [$counterController, 'transfer'], true, 'counter.close');
 
 $router->get('/expenses', [$expenseController, 'index'], true, 'expenses.view');
 $router->get('/expenses/data', [$expenseController, 'data'], true, 'expenses.view');
@@ -181,3 +183,5 @@ $router->get('/reports/export', [$reportController, 'export'], true, 'reports.ex
 $router->get('/users', [$userController, 'index'], true, 'users.view');
 $router->get('/users/data', [$userController, 'data'], true, 'users.view');
 $router->post('/users', [$userController, 'store'], true, 'users.manage');
+$router->post('/users/permissions', [$userController, 'permissions'], true, 'users.manage');
+$router->get('/users/role-permissions', [$userController, 'rolePermissions'], true, 'users.view');
