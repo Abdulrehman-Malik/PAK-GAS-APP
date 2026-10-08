@@ -28,6 +28,7 @@ $user = $user ?? null;
                 <a class="nav-link" href="<?= e(url('/cylinder-groups')) ?>">Cylinder Groups</a>
                 <a class="nav-link" href="<?= e(url('/cylinders')) ?>">Cylinders</a>
                 <a class="nav-link" href="<?= e(url('/rates')) ?>">Rates</a>
+                <a class="nav-link" href="<?= e(url('/opening-stock')) ?>">Opening Stock</a>
             <?php endif; ?>
         </nav>
         <div class="sidebar-footer">
