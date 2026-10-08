@@ -31,11 +31,9 @@ lpg-pos/
 ├── REQUIREMENTS.md
 ├── .env.example              # DB creds, APP_ENV, APP_URL, TIMEZONE (never commit .env)
 ├── bin/
-│   ├── migrate.php           # runs database/migrations/*.sql in order, records in `migrations` table
-│   └── seed.php              # admin user, default roles, settings, expense categories, demo data (dev only)
+│   └── seed.php              # creates the environment-based administrator
 ├── database/
-│   ├── migrations/           # 001_core.sql, 002_masters.sql, ... (never edit an applied migration; add a new one)
-│   └── seeds/
+│   └── schema.sql             # complete DB creation, tables, views, indexes and static seed data
 ├── public/                   # web root (only this folder is exposed)
 │   ├── index.php             # front controller
 │   ├── .htaccess             # rewrite everything to index.php
@@ -131,11 +129,11 @@ Invariants (each has a test):
 
 ## 8. Database rules
 
-- Migrations are plain SQL files, applied in order by `bin/migrate.php`; never edit an applied one.
+- Database baseline is one canonical SQL file: `database/schema.sql`. Do not add migration scripts.
 - FKs on every relationship with `ON DELETE RESTRICT`; indexes on FKs and on common filters (`status`, `entry_date`, `code`, `location`).
 - Use `CHECK` constraints (MySQL 8) where possible; if running MariaDB/older MySQL, enforce in services as well.
 - Create SQL **views** for repeated reads (e.g. `v_cylinder_status`, `v_party_balance`, `v_shop_stock_summary`) so reports and screens agree.
-- Seed: default admin (force password change on first login), roles/permissions, settings defaults, expense categories, one default counter.
+- Static seed data lives in `database/schema.sql`; `bin/seed.php` only creates the environment-based administrator with a hashed password.
 - Table definitions: follow section 7 of `REQUIREMENTS.md`; add columns if needed and record them in the Decisions log below.
 
 ## 9. Testing & quality
@@ -159,7 +157,7 @@ Invariants (each has a test):
 
 ### Phase 0 — Foundation
 - [x] Repo skeleton, Composer-free autoload, `.env` loader, front controller, router
-- [x] `DB` (PDO) wrapper with transactions; `bin/migrate.php`; `001_core.sql` (users, roles, permissions, settings, audit_log, sequences)
+- [x] `DB` (PDO) wrapper with transactions; canonical `database/schema.sql` (all tables, views and static seed data)
 - [x] Auth (login/logout, session hardening, throttling, CSRF), role/permission middleware
 - [x] Main layout (sidebar, topbar, flash, modal/toast helpers), shared JS (`$.ajaxSetup` CSRF, DataTables defaults, number helpers)
 - [x] Settings screen shell with tabs; seed script
@@ -213,8 +211,8 @@ Invariants (each has a test):
 ```
 composer install
 cp .env.example .env            # set DB credentials
-php bin/migrate.php             # apply migrations
-php bin/seed.php                # seed admin + defaults (dev demo data with --demo)
+C:\xampp\mysql\bin\mysql.exe -u root -p < database\schema.sql  # create DB + schema + static seeds
+php bin\seed.php                                      # create/refresh Admin from .env
 php -S localhost:8080 -t public # quick dev server (or use XAMPP vhost pointing at public/)
 vendor/bin/phpunit              # run tests
 ```
@@ -233,7 +231,7 @@ vendor/bin/phpunit              # run tests
 
 | Date | Phase/Task | Status | Notes for next session |
 |---|---|---|---|
-| 2026-10-08 | Phase 0 — Foundation | Completed | Added custom PHP foundation, PDO migration/seed tooling, auth/security shell, responsive Bootstrap/jQuery UI, QA checklist and CI. |
+| 2026-10-08 | Phase 0 — Foundation | Completed | Added custom PHP foundation, PDO schema/seed tooling, auth/security shell, responsive Bootstrap/jQuery UI, QA checklist and CI. |
 | 2026-10-08 | Phase 1 review / Phase 2 start | In progress | Masters screens are present, but configurable code-pattern, master delete protection, party import, and complete Phase 1 QA remain. Opening Stock transaction/history foundation and deployment README added. |
 
 ## 15. Open questions for the product owner
@@ -254,3 +252,9 @@ See `REQUIREMENTS.md` §11. Do not block on them: implement the stated default a
 - [x] Receipt thermal print layout and downloadable Excel template
 - [x] GitHub Actions lint/runtime checks passing on the completion branch
 - [~] Browser QA cannot be executed in the current tool environment; deployment verification remains on-host
+
+
+## 2026-10-08 Database installation decision
+- [x] All database DDL, views, indexes and static seed records consolidated into `database/schema.sql`.
+- [x] Legacy `database/migrations/*.sql`, `bin/migrate.php`, `MigrationService` and automatic login-time migration execution removed.
+- [x] Windows/XAMPP installation documented around MySQL schema import plus `bin/seed.php` for the Admin credential.
