@@ -27,13 +27,19 @@ final class Auth
         }
 
         return $this->db->fetchOne(
-            'SELECT u.id, u.username, u.full_name, u.role_id, u.default_counter_id, u.active,
+            'SELECT u.id, u.username, u.full_name, u.role_id, u.default_counter_id, u.active, u.force_password_change,
                     r.code AS role_code, r.name AS role_name
              FROM users u
              INNER JOIN roles r ON r.id = u.role_id
              WHERE u.id = :id AND u.active = 1',
             ['id' => $userId]
         );
+    }
+
+    public function mustChangePassword(): bool
+    {
+        $user = $this->user();
+        return $user !== null && (bool) $user['force_password_change'];
     }
 
     public function attempt(string $username, string $password, string $ip): bool
