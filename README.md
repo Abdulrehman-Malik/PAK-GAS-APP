@@ -301,3 +301,7 @@ Never manually modify production tables when a migration is required. Add and de
 - `public/` is the only web-exposed directory.
 
 See `AGENT.md` for coding rules and `REQUIREMENTS.md` for functional acceptance criteria.
+
+## Automatic database setup
+
+On the first visit to the login page, the application creates the configured database if missing and applies only pending migrations. The configured MySQL user must have `CREATE DATABASE` privilege. Existing databases are checked for pending migrations. The same migration engine is available through `php bin/migrate.php`.
