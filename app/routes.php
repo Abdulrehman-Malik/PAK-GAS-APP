@@ -29,6 +29,7 @@ $partyController = new PartyController(new PartyRepository($db), $auth, $request
 $groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService);
 $cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
+$openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CylinderStatus()), $auth, $request, new Validator(), new AuditService($db));
 $settingsController = new SettingsController(
     new SettingsService(new SettingsRepository($db)),
     $auth
@@ -53,3 +54,7 @@ $router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.cre
 $router->get('/rates', [$rateController, 'index'], true, 'rates.view');
 $router->get('/rates/data', [$rateController, 'data'], true, 'rates.view');
 $router->post('/rates', [$rateController, 'store'], true, 'rates.create');
+
+$router->get('/opening-stock', [$openingStockController, 'index'], true, 'opening_stock.view');
+$router->get('/opening-stock/data', [$openingStockController, 'data'], true, 'opening_stock.view');
+$router->post('/opening-stock', [$openingStockController, 'store'], true, 'opening_stock.create');
