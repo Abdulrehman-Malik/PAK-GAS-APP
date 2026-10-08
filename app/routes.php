@@ -59,7 +59,7 @@ $homeController = new HomeController($auth);
 $protectionService = new MasterProtectionService($db);
 $stockService = new StockService($db, new CodeGenerator($db));
 $partyController = new PartyController(new PartyRepository($db), $auth, $request, new Validator(), $auditService, $protectionService);
-$groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService, $protectionService);
+$groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService, $protectionService, new CodeGenerator($db));
 $cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $stockService, $auth, $request, new Validator(), $auditService, $protectionService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 
