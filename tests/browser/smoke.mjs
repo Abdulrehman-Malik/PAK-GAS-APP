@@ -92,7 +92,16 @@ async function testTabs(page, label) {
     if (!target || !target.startsWith('#')) continue;
 
     await tab.click();
-    await page.waitForTimeout(150);
+
+    await tab.waitFor({ state: 'visible' });
+    await page.waitForFunction(
+      ({ tabId, targetSelector }) => {
+        const tab = document.getElementById(tabId);
+        const pane = document.querySelector(targetSelector);
+        return Boolean(tab && pane && tab.classList.contains('active') && pane.classList.contains('active'));
+      },
+      { tabId: await tab.getAttribute('id'), targetSelector: target }
+    );
 
     if (!(await tab.evaluate((node) => node.classList.contains('active')))) {
       await fail(`${label}: tab #${i + 1} did not become active`);
