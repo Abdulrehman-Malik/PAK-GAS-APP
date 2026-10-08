@@ -67,7 +67,7 @@ final class PaymentService
             $paymentId = $this->db->lastInsertId();
 
             $postingMode = strtoupper((string) (($this->db->fetchOne(
-                "SELECT setting_value FROM settings WHERE setting_group = 'cheques' AND setting_key = 'posting_mode'"
+                "SELECT setting_value FROM settings WHERE setting_group='cheques' AND setting_key IN ('cheque_ledger_posting','posting_mode') ORDER BY setting_key='cheque_ledger_posting' DESC LIMIT 1"
             )['setting_value'] ?? 'ON_CLEARANCE')));
 
             if ($method === 'CHEQUE' && $postingMode === 'ON_CLEARANCE') {
