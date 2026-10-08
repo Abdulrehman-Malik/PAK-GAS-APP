@@ -9,8 +9,8 @@ final class PartyRepository
     {
         $where='party_type=:type'; $params=['type'=>$type,'limit'=>$limit,'offset'=>$offset];
         if($search!==''){ $where.=' AND (code LIKE :search OR name LIKE :search OR phone LIKE :search)'; $params['search']='%'.$search.'%'; }
-        $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM parties WHERE {$where}", $params)['c']??0);
-        $rows=$this->db->fetchAll("SELECT * FROM parties WHERE {$where} ORDER BY active DESC,name LIMIT :limit OFFSET :offset",$params);
+        $total=(int)($this->db->fetchOne("SELECT COUNT(*) c FROM parties p WHERE {$where}", $params)['c']??0);
+        $rows=$this->db->fetchAll("SELECT p.*,b.balance AS current_balance FROM parties p LEFT JOIN v_party_balance b ON b.id=p.id WHERE {$where} ORDER BY p.active DESC,p.name LIMIT :limit OFFSET :offset",$params);
         return ['rows'=>$rows,'total'=>$total];
     }
     public function find(int $id): ?array { return $this->db->fetchOne('SELECT * FROM parties WHERE id=:id',['id'=>$id]); }
