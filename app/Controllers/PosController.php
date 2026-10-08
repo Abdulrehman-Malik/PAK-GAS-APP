@@ -42,21 +42,32 @@ final class PosController
 
     public function config(): Response
     {
-        $row = $this->db->fetchOne(
-            "SELECT setting_value
+        $rows = $this->db->fetchAll(
+            "SELECT setting_key, setting_value
              FROM settings
-             WHERE setting_group = 'sales' AND setting_key = 'pos_transaction_types'"
+             WHERE setting_group = 'sales'
+               AND setting_key IN ('pos_transaction_types', 'pos_default_transaction_type')"
         );
 
+        $values = [];
+        foreach ($rows as $row) {
+            $values[(string) $row['setting_key']] = (string) $row['setting_value'];
+        }
+
         $types = array_values(array_filter(
-            array_map('trim', explode(',', (string) ($row['setting_value'] ?? 'GAS_SALE,EMPTY_CYLINDER_SALE')))
+            array_map('trim', explode(',', $values['pos_transaction_types'] ?? 'GAS_SALE,EMPTY_CYLINDER_SALE'))
         ));
+        $defaultType = $values['pos_default_transaction_type'] ?? ($types[0] ?? 'GAS_SALE');
+
+        if (!in_array($defaultType, $types, true)) {
+            $defaultType = $types[0] ?? 'GAS_SALE';
+        }
 
         return Response::json([
             'ok' => true,
             'data' => [
                 'transaction_types' => $types,
-                'default_transaction_type' => $types[0] ?? 'GAS_SALE',
+                'default_transaction_type' => $defaultType,
             ],
         ]);
     }
