@@ -17,6 +17,14 @@ $permissions = [
     ['settings.manage', 'Manage settings', 'settings'],
     ['users.view', 'View users', 'users'],
     ['users.manage', 'Manage users', 'users'],
+    ['parties.view', 'View parties', 'parties'],
+    ['parties.create', 'Create parties', 'parties'],
+    ['cylinder_groups.view', 'View cylinder groups', 'cylinder_groups'],
+    ['cylinder_groups.create', 'Create cylinder groups', 'cylinder_groups'],
+    ['cylinders.view', 'View cylinders', 'cylinders'],
+    ['cylinders.create', 'Create cylinders', 'cylinders'],
+    ['rates.view', 'View rates', 'rates'],
+    ['rates.create', 'Create rates', 'rates'],
 ];
 
 foreach ($permissions as [$code, $name, $module]) {
