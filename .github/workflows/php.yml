@@ -88,3 +88,74 @@ jobs:
 
           php bin/test-installer.php
           docker exec pak-gas-installer-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas_installer_test; SHOW TABLES LIKE 'ci_installer_smoke'; SELECT migration FROM schema_migrations WHERE migration='999_ci_installer_smoke.sql';"
+ 
+      - name: Browser UI smoke test
+        shell: bash
+        run: |
+          set -e
+          docker run -d --name pak-gas-browser-test -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
+          PHP_SERVER_PID=0
+          trap 'if [ "$PHP_SERVER_PID" -ne 0 ]; then kill "$PHP_SERVER_PID" >/dev/null 2>&1 || true; fi; docker rm -f pak-gas-browser-test >/dev/null 2>&1 || true; rm -f .env /tmp/pak-gas-router.php /tmp/pak-gas-browser.log' EXIT
+
+          browser_ready=0
+          for i in {1..30}; do
+            if docker exec pak-gas-browser-test mariadb-admin ping -h 127.0.0.1 -uroot -proot --silent >/dev/null 2>&1; then
+              browser_ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$browser_ready" -eq 1
+
+          docker exec -i pak-gas-browser-test mariadb -h 127.0.0.1 -uroot -proot < database/schema.sql
+          BROWSER_DB_HOST=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pak-gas-browser-test)
+
+          cat > .env <<ENV
+          APP_ENV=test
+          APP_URL=http://127.0.0.1:8080
+          APP_NAME=Pak Gas POS
+          TIMEZONE=Asia/Karachi
+          DB_HOST=$BROWSER_DB_HOST
+          DB_PORT=3306
+          DB_NAME=pak_gas
+          DB_USER=root
+          DB_PASS=root
+          SESSION_TIMEOUT=1800
+          SESSION_SECURE_COOKIE=false
+          SEED_ADMIN_USERNAME=ci_admin
+          SEED_ADMIN_PASSWORD=CiInstallerPassword123!
+          ENV
+
+          php bin/seed.php
+          docker exec pak-gas-browser-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas; UPDATE users SET force_password_change=0 WHERE username='ci_admin';"
+
+          cat > /tmp/pak-gas-router.php <<'PHP'
+          <?php
+          $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+          $file = getcwd() . '/public' . $path;
+          if ($path !== '/' && is_file($file)) {
+              return false;
+          }
+          require getcwd() . '/public/index.php';
+          PHP
+
+          php -S 127.0.0.1:8080 /tmp/pak-gas-router.php > /tmp/pak-gas-browser.log 2>&1 &
+          PHP_SERVER_PID=$!
+
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8080/login >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/login >/dev/null
+
+          npm install --no-save playwright@latest
+          npx playwright install --with-deps chromium
+
+          APP_URL=http://127.0.0.1:8080 \
+          CI_ADMIN_USERNAME=ci_admin \
+          CI_ADMIN_PASSWORD='CiInstallerPassword123!' \
+          npx playwright node tests/browser/smoke.mjs
+
+          echo "Browser UI smoke test completed."
