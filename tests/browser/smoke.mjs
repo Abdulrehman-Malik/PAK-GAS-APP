@@ -112,11 +112,15 @@ async function testTabs(page, label) {
 }
 
 async function main() {
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
   });
-  const page = await context.newPage();
+    const page = await context.newPage();
+    page.setDefaultTimeout(5000);
+    page.setDefaultNavigationTimeout(10000);
 
   page.on('pageerror', (error) => {
     console.error(`[browser pageerror] ${error.message}`);
@@ -179,11 +183,15 @@ async function main() {
     console.log(`PASS  ${screen.label}`);
   }
 
-  console.log(`Browser smoke test passed: ${screens.length} screens checked.`);
-  await browser.close();
+    console.log(`Browser smoke test passed: ${screens.length} screens checked.`);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 }
 
-main().catch(async (error) => {
+main().catch((error) => {
   console.error(error.stack || error.message);
   process.exitCode = 1;
 });
