@@ -20,7 +20,7 @@ final class PosService {
     $c=$this->db->fetchOne('SELECT c.*,cg.capacity_kg FROM cylinders c JOIN cylinder_groups cg ON cg.id=c.group_id WHERE c.id=:id AND c.active=1 FOR UPDATE',['id'=>$cid]);
     if(!$c||$c['condition_code']!=='GOOD') throw new \InvalidArgumentException('Cylinder is unavailable.');
     $before=(string)$c['gas_kg'];$cap=(string)$c['capacity_kg'];
-    $resolved=$this->rates->resolve((int)$c['group_id'],$date); if(bccomp($rate,'0.00',2)<=0)$rate=(string)$resolved['gas_rate']; if(bccomp($cprice,'0.00',2)<=0)$cprice=(string)$resolved['cylinder_price'];
+    if($txnType==='EMPTY_CYLINDER_SALE') { $grp=$this->db->fetchOne('SELECT cylinder_price FROM cylinder_groups WHERE id=:g',['g'=>$c['group_id']]); if(bccomp($cprice,'0.00',2)<=0)$cprice=(string)($grp['cylinder_price']??'0.00'); } else { $resolved=$this->rates->resolve((int)$c['group_id'],$date); if(bccomp($rate,'0.00',2)<=0)$rate=(string)$resolved['gas_rate']; if(bccomp($cprice,'0.00',2)<=0)$cprice=(string)$resolved['cylinder_price']; }
     if(in_array($type,['ISSUE','SELL_FILLED'],true)&&bccomp($gas,'0',3)<=0) throw new \InvalidArgumentException('Gas quantity must be greater than zero.');
     if(bccomp($gas,'0',3)<0||bccomp($gas,$cap,3)>0) throw new \InvalidArgumentException('Gas quantity exceeds cylinder capacity.');
     if(in_array($type,['ISSUE','SELL_FILLED'],true)&&bccomp($rate,'0.00',2)<=0) throw new \InvalidArgumentException('Gas rate must be greater than zero.');
