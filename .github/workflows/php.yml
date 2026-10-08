@@ -46,16 +46,6 @@ jobs:
             sleep 2
           done
           test "$ready" -eq 1
-
-          port_ready=0
-          for i in {1..30}; do
-            if (echo > /dev/tcp/127.0.0.1/3306) >/dev/null 2>&1; then
-              port_ready=1
-              break
-            fi
-            sleep 1
-          done
-          test "$port_ready" -eq 1
           docker exec -i pak-gas-schema-test mariadb -h 127.0.0.1 -uroot -proot < database/schema.sql
           docker exec pak-gas-schema-test mariadb -h 127.0.0.1 -uroot -proot -e "USE pak_gas; SELECT COUNT(*) AS tables_count FROM information_schema.tables WHERE table_schema='pak_gas' AND table_type='BASE TABLE'; SELECT COUNT(*) AS permission_count FROM permissions; SELECT COUNT(*) AS settings_count FROM settings; SELECT COUNT(*) AS view_count FROM information_schema.views WHERE table_schema='pak_gas';"
 
@@ -66,12 +56,15 @@ jobs:
           docker run -d --name pak-gas-installer-test -e MARIADB_ROOT_PASSWORD=root mariadb:10.6
           trap 'docker rm -f pak-gas-installer-test >/dev/null 2>&1 || true; rm -f .env database/migrations/999_ci_installer_smoke.sql' EXIT
 
+          installer_ready=0
           for i in {1..30}; do
             if docker exec pak-gas-installer-test mariadb-admin ping -h 127.0.0.1 -uroot -proot --silent >/dev/null 2>&1; then
+              installer_ready=1
               break
             fi
             sleep 1
           done
+          test "$installer_ready" -eq 1
 
           export TEST_DB_HOST=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pak-gas-installer-test)
           export TEST_DB_PORT=3306
@@ -79,7 +72,7 @@ jobs:
           export TEST_DB_USER=root
           export TEST_DB_PASS=root
 
-          cat > .env <<'ENV'
+          cat > .env <<ENV
           APP_ENV=test
           APP_URL=http://localhost
           APP_NAME=Pak Gas POS
