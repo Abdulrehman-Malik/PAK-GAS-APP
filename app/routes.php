@@ -47,7 +47,7 @@ $passwordController = new PasswordController($auth, $request, $session, new Vali
 $homeController = new HomeController($auth);
 $auditService = new AuditService($db);
 $partyController = new PartyController(new PartyRepository($db), $auth, $request, new Validator(), $session, $auditService);
-$groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService);
+$groupController = new CylinderGroupController(new CylinderGroupRepository($db), $auth, $request, new Validator(), $auditService, new CodeGenerator($db));
 $cylinderController = new CylinderController(new CylinderRepository($db), new CodeGenerator($db), $auth, $request, new Validator(), $auditService, $db);
 $rateController = new RateController(new RateRepository($db), $auth, $request, new Validator(), $auditService);
 $openingStockController = new OpeningStockController(new StockBatchRepository($db), new StockService($db, new CodeGenerator($db)), $auth, $request, new Validator(), $auditService);
@@ -106,6 +106,7 @@ $router->post('/parties', [$partyController, 'store'], true, 'parties.create');
 $router->get('/cylinder-groups', [$groupController, 'index'], true, 'cylinder_groups.view');
 $router->get('/cylinder-groups/data', [$groupController, 'data'], true, 'cylinder_groups.view');
 $router->post('/cylinder-groups', [$groupController, 'store'], true, 'cylinder_groups.create');
+$router->post('/cylinder-groups/{id}/delete', [$groupController, 'delete'], true, 'cylinder_groups.create');
 $router->get('/cylinders', [$cylinderController, 'index'], true, 'cylinders.view');
 $router->get('/cylinders/data', [$cylinderController, 'data'], true, 'cylinders.view');
 $router->post('/cylinders', [$cylinderController, 'store'], true, 'cylinders.create');
