@@ -60,6 +60,21 @@ final class CylinderController
         }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
     }
 
+    public function adjust():Response
+    {
+        try{
+            $d=$this->request->input();
+            $result=$this->stock->adjustGas(
+                (int)($d['id']??0),
+                (string)($d['gas_kg']??'0.000'),
+                (string)($d['reason']??''),
+                (int)$this->auth->user()['id']
+            );
+            $this->audit->record((int)$this->auth->user()['id'],'ADJUST','cylinders',(int)($d['id']??0),null,$result,$this->request->ip());
+            return Response::json(['ok'=>true,'data'=>$result,'message'=>'Stock adjusted.']);
+        }catch(\Throwable $e){return Response::json(['ok'=>false,'message'=>$e->getMessage()],422);}
+    }
+
     public function update():Response
     {
         try{
