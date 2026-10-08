@@ -33,6 +33,38 @@ $user = $user ?? null;
                 <a class="nav-link" href="<?= e(url('/counter')) ?>">Cash Counter</a>
             <?php endif; ?>
 
+            <?php if ($GLOBALS['auth']->can('receipts.view')): ?>
+                <a class="nav-link" href="<?= e(url('/receipts')) ?>">Receipts</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('purchases.view')): ?>
+                <a class="nav-link" href="<?= e(url('/purchases')) ?>">Purchases</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('payments.view')): ?>
+                <a class="nav-link" href="<?= e(url('/payments')) ?>">Payments</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('cheques.view')): ?>
+                <a class="nav-link" href="<?= e(url('/cheques')) ?>">Cheques</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('expenses.view')): ?>
+                <a class="nav-link" href="<?= e(url('/expenses')) ?>">Expenses</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('reports.view')): ?>
+                <a class="nav-link" href="<?= e(url('/reports')) ?>">Reports</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('users.view')): ?>
+                <a class="nav-link" href="<?= e(url('/users')) ?>">Users & Roles</a>
+            <?php endif; ?>
+
+            <?php if ($GLOBALS['auth']->can('sales.view')): ?>
+                <a class="nav-link" href="<?= e(url('/sales-history')) ?>">Sales History</a>
+            <?php endif; ?>
+
             <?php if ($GLOBALS['auth']->can('settings.view')): ?>
                 <a class="nav-link" href="<?= e(url('/settings')) ?>">Settings</a>
             <?php endif; ?>
